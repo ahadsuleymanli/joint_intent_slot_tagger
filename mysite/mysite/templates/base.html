@@ -1,0 +1,18 @@
+{% load static %}
+<link rel="stylesheet" type="text/css" href="{% static 'main.css' %}">
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<header id="header">
+    <div id="logo"> ...
+    <div id="top_menu">
+    <a href="/index">Home</a> | Help |
+    <a href="/index/edit_intents">Edit Intents</a>
+    <!-- <a href="/contact">Contact Us</a> -->
+    </div>
+<div id="content">
+    {% block content %}{% endblock %}
+</div>
+</html>

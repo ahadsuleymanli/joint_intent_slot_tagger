@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+<body>
+<h2>Edit intents and slots</h2>
+</p>
+<div>
+    <form id="edit_intent_form" action="" method="post" novalidate>
+        {% csrf_token %}
+        <div id="inlineSection" class="inline-submit-section" style="background-color:rgba(11, 29, 12, 0.178)">
+            <div id="radioButtonContainer">
+                {{form.intent_label_choices}} <br>
+                <span class="sentence-wrapper">
+                {{form.new_intent_label_field}}
+                </span>
+                <input name="add_intent_label" type="submit" value="add" class="submit-button">
+                <input name="remove_intent_label" type="submit" value="remove" class="submit-button">
+                <span style="clear: both;"></span>
+                <br>
+            </div>
+            <br>
+            {{ form.non_field_errors }}
+            <span class="sentence-wrapper">
+                {{form.slots_field}}
+            </span>
+            <input id="submit" name="update_slots" type="submit" value="update slots" class="submit-button">
+            <span style="clear: both;"></span>
+            </div>
+            {{ form.intent_field.errors }}
+            {{ form.intent_field.help_text }}
+            {{form.slots}}
+        </div>
+    </form>
+</div>
+<script>
+const intent_label_choices = document.getElementById('id_intent_label_choices');
+const slots_field = document.getElementById('id_slots_field');
+var intents_json = JSON.parse("{{form.intents_json|escapejs}}");
+
+console.log(intents_json);
+function updateForm(){
+    localStorage['id_intent_label_choices'] = intent_label_choices.value;
+    var id = intent_label_choices.options[intent_label_choices.selectedIndex].value;
+    var slotsString = "";
+    selected = intents_json[id];
+    selected.forEach(function (item, index) {
+        if (slotsString !== "")
+            slotsString += " "
+        slotsString += item["slot_name"];
+    }); 
+    slots_field.value = slotsString;
+}
+intent_label_choices.value = localStorage['id_intent_label_choices'];
+updateForm();
+
+</script>
+</body>
+{% endblock content %}
+    

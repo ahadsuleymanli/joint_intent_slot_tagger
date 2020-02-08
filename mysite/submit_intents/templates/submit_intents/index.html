@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .inline-submit-section {
+    position: relative;
+    width: 100%;
+    }
+    .sentence-wrapper {
+    position: absolute;
+    display: inline-block;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    left: 0;
+    right: 100px;
+    }
+    .intent-sentence {
+    width: 100%;
+    margin: 25px 0px 0px 0px;
+    padding: 5px;
+    border: 1px solid #999999;
+    height: 35px;
+    
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    }
+    .submit-button {
+    position: absolute;
+    background-color: #4CAF50;
+    text-align: center;
+    border: none;
+    border-radius: 4px;
+    outline: none;
+    display: inline-block;
+    right: 0;
+    margin: 25px 0px 0px 10px;
+    width: 80px;
+    color: #fff;
+    padding: 7px;
+    font-style: italic;
+    cursor: pointer;
+
+    box-shadow: 0 3px #999;
+    }
+    .submit-button:hover {
+    background-color: #3e8e41;
+    }
+    .submit-button:active {
+    background-color: #3e8e41;
+    box-shadow: 0 2px #666;
+    transform: translateY(1px);
+    }
+    .highlighted {
+    outline:1px solid #F00; /* Firefox, Opera, Chrome, IE8+ */
+    *filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=-1, OffY=0,color=#FF0000) progid:DXImageTransform.Microsoft.dropshadow(OffX=1, OffY=0,color=#FF0000) progid:DXImageTransform.Microsoft.dropshadow(OffX=0, OffY=-1,color=#FF0000) progid:DXImageTransform.Microsoft.dropshadow(OffX=0, OffY=1,color=#FF0000); /* IE6, IE7 */
+}
+</style>
+<body>
+<h2>Text Select Example</h2>
+{% if submitted %}
+<p class="success">
+Your message was submitted successfully. Thank you.
+{% endif %}
+</p>
+<div>
+    <form id="submit_intent_form"action="" method="post" novalidate>
+        {% csrf_token %}
+        
+        <div id="inlineSection" class="inline-submit-section" style="background-color:rgba(11, 29, 12, 0.178)">
+            <div id="radioButtonContainer">
+                {{form.intent_label_choices}}
+                {{form.slots_choices}}
+                <br>
+                <br>
+            </div>
+            <span class="sentence-wrapper">
+                {{form.intent_field}}
+            </span>
+            <input id="submit_btn" type="submit" value="Submit" class="submit-button">
+            <span style="clear: both;"></span>
+            </div>
+            {{ form.intent_field.errors }}
+            {{ form.intent_field.help_text }}
+            {{ form.non_field_errors }}
+            {% for hidden_field in form.hidden_fields %}
+                {{ hidden_field.errors }}
+                {{ hidden_field }}
+            {% endfor %}
+        </div>
+    </form>
+</div>
+<script>
+const radiobuttons = document.getElementsByName('slots_choices');
+const intent_label_choices = document.getElementById('id_intent_label_choices');
+const radioButtonContainer = document.getElementById("radioButtonContainer");
+const results = document.getElementById("results");
+var form = document.getElementById("submit_intent_form");
+const submit_btn = document.getElementsByName('slots_choices')[0];
+console.log(submit_btn)
+submit_btn.setAttribute("style", "outline:green; ");
+radiobuttons.forEach(radiobutton => {
+    
+    // radiobutton.name = "1"
+    // radiobutton.setAttribute("style", "color:red; ");
+    // console.log(radiobutton)
+    // radiobutton. = "blue";
+    radiobutton.addEventListener('mousedown', e => {
+        event.preventDefault();
+    }); 
+});
+radioButtonContainer.addEventListener('mousedown', e => {
+    var targetElement = event.target || event.srcElement;
+    if (targetElement == intent_label_choices){
+        
+    }
+    else
+        event.preventDefault();
+});
+
+function updateForm(){
+    localStorage['id_intent_label_choices'] = intent_label_choices.value;
+    form.submit();
+}
+intent_label_choices.value = localStorage['id_intent_label_choices'];
+
+
+
+</script>
+
+</body>
+{% endblock content %}
+    
