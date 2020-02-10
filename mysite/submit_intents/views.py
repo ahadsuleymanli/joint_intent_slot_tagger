@@ -27,7 +27,7 @@ def index(request):
             intent = IntentModel.objects.filter(intent_label=request.GET["intent_label"]).first()
             form = SubmitIntentsForm(instance=intent)
         else:
-            form = SubmitIntentsForm()
+            form = SubmitIntentsForm(request.POST)
 
     return render(request, 'submit_intents/index.html', {'form': form})
 

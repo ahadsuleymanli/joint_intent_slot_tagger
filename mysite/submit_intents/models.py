@@ -102,8 +102,7 @@ colors = {
     "olive": "#808000",
     "orange": "#ffa500",
     "pink": "#ffc0cb",
-    "purple": "#800080",
-    "violet": "#800080",
+    "purple": "#844484",
     "red": "#ff0000",
     "yellow": "#ffff00"
 }

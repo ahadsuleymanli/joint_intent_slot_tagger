@@ -51,10 +51,7 @@
     box-shadow: 0 2px #666;
     transform: translateY(1px);
     }
-    .highlighted {
-    outline:1px solid #F00; /* Firefox, Opera, Chrome, IE8+ */
-    *filter: progid:DXImageTransform.Microsoft.dropshadow(OffX=-1, OffY=0,color=#FF0000) progid:DXImageTransform.Microsoft.dropshadow(OffX=1, OffY=0,color=#FF0000) progid:DXImageTransform.Microsoft.dropshadow(OffX=0, OffY=-1,color=#FF0000) progid:DXImageTransform.Microsoft.dropshadow(OffX=0, OffY=1,color=#FF0000); /* IE6, IE7 */
-}
+
 </style>
 <body>
 <h2>Text Select Example</h2>
@@ -70,14 +67,21 @@ Your message was submitted successfully. Thank you.
         <div id="inlineSection" class="inline-submit-section" style="background-color:rgba(11, 29, 12, 0.178)">
             <div id="radioButtonContainer">
                 {{form.intent_label_choices}}
+                <!-- {{form.intent_label_choices.errors}} -->
                 <table border="0">
                 {% for slot_choice,slot_name in form.slots_choices.field.choices %}
                 <tr>
-                  <td bgcolor = {{ slot_choice.color_hex }}>
-                    <input type="radio" name="slots_choices" value={{ slot_choice.slot_name }}> {{ slot_choice.slot_name }} &nbsp; <br>
+                  <td>
+                    <input type="button" name="slots_choices" style= "background-color: {{ slot_choice.color_hex }}" value={{ slot_choice.slot_name }}> <br>
                   </td>
                 </tr>
+                <!-- &nbsp; -->
               {% endfor %}
+              <tr>
+                <td>
+                  <input type="button" id="clearSlots" name="slots_choices" style= "background-color: silver" value="clear slot"> <br>
+                </td>
+              </tr>
             </table>
                 <br>
                 <br>
@@ -88,29 +92,44 @@ Your message was submitted successfully. Thank you.
             <input id="submit_btn" type="submit" value="Submit" class="submit-button">
             <span style="clear: both;"></span>
             </div>
-            {{ form.intent_field.errors }}
-            {{ form.intent_field.help_text }}
+            
+            <!-- {{ form.intent_field.errors }} -->
+            <!-- {{ form.intent_field.help_text }}
             {{ form.non_field_errors }}
             {% for hidden_field in form.hidden_fields %}
                 {{ hidden_field.errors }}
-                {{ hidden_field }}
+                {{ hidden_field }} -->
             {% endfor %}
         </div>
+        <br>
+        <br>
+        <br>
+        {{form.mask_field}}
+        <div id="coloredTextDiv"><span style="background-color:#00FEFE">Cyan Text</span>
+            <span style="background-color:#00FEFE">Cyan Text</span></div>
     </form>
 </div>
 <script>
 const radiobuttons = document.getElementsByName('slots_choices');
 const intent_label_choices = document.getElementById('id_intent_label_choices');
 const radioButtonContainer = document.getElementById("radioButtonContainer");
-const results = document.getElementById("results");
-var form = document.getElementById("submit_intent_form");
-// const submit_btn = document.getElementsByName('slots_choices')[0];
-// // console.log(submit_btn)
-// submit_btn.setAttribute("style", "outline:green; ");
+const form = document.getElementById("submit_intent_form");
+const intent_field = document.getElementById("id_intent_field");
+const mask_field = document.getElementById("id_mask_field");
+const coloredTextDiv = document.getElementById("coloredTextDiv");
+const intents_json = JSON.parse("{{form.intents_json|escapejs}}");
 radiobuttons.forEach(radiobutton => {
     radiobutton.addEventListener('mousedown', e => {
         event.preventDefault();
-    }); 
+    });
+    if (radiobutton.id !== "clearSlots")
+        radiobutton.addEventListener('click', function() {
+                updateMask(this.value);
+            }); 
+    else
+        radiobutton.addEventListener('click', function() {
+                    updateMask("",true);
+                }); 
 });
 radioButtonContainer.addEventListener('mousedown', e => {
     var targetElement = event.target || event.srcElement;
@@ -126,9 +145,76 @@ function updateForm(){
 }
 intent_label_choices.value = localStorage['id_intent_label_choices'];
 
-function getColor(id){
-    console.log(id);
-    return id;
+
+function printSlotColoredText(){
+    const wordsArray = intent_field.value.replace(/\s\s+/g, ' ').trim().split(' ');
+    const masksArray = maskArray = mask_field.value.split(' ');
+    const intent_name = intent_label_choices.value;
+    const intent_slot_colors = intents_json[intent_name];
+    // coloredTextDiv;
+    console.log(intent_slot_colors)
+    coloredTextDiv.innerHTML = ""
+    if (wordsArray.length === masksArray.length){
+        for (var i = 0 ; i<masksArray.length ; i++){
+            var newSpan = document.createElement('span');
+            var blankSpan = document.createElement('span');
+            const slotName = masksArray[i].replace('B-','').replace('I-','');
+            newSpan.innerHTML = wordsArray[i];
+            blankSpan.innerHTML = '&nbsp;';
+            newSpan.style = "background-color:"+intent_slot_colors[slotName];
+            if (masksArray[i].includes("I-"))
+                blankSpan.style = "background-color:"+intent_slot_colors[slotName];
+            coloredTextDiv.appendChild(blankSpan);
+            coloredTextDiv.appendChild(newSpan);
+            
+ 
+        }
+    }
+
+}
+// console.log(intents_json);
+printSlotColoredText();
+// console.log(intents_json.dsdsa[1].slot_name)
+function updateMask(slot, clear=false){
+    const text = intent_field.value.replace(/\s\s+/g, ' ').trim();
+    const selectionStart = intent_field.selectionStart;
+    const selectionEnd = intent_field.selectionEnd;
+    var maskArray;
+
+    if (mask_field.value && mask_field.value.split(' ').length === text.split(' ').length){
+        maskArray = mask_field.value.split(' ');
+    }else
+        maskArray = new Array(text.split(' ').length).fill('O');
+    var atBlank = false; // this is to handle erroneous mutliple blanks
+    var atSlot = false;
+    var bPrefixUsed = false;
+    var j = 0;
+    for (var i = 0; i < text.length; i++) {
+        if (i >= selectionStart && i < selectionEnd)
+            atSlot = true;
+        else if (i > selectionEnd)
+            atSlot = false;
+        if (text.charAt(i)!==' ' && atBlank){
+            atBlank = false;
+        }
+        if ((text.charAt(i)===' ' || i===text.length-1) && !atBlank){
+            atBlank = true;
+            if (atSlot && !clear){
+                if (!bPrefixUsed){
+                    maskArray[j]="B-"+slot;
+                    bPrefixUsed = true;
+                }
+                else
+                    maskArray[j]="I-"+slot;
+            }
+            else if (atSlot)
+                maskArray[j]="O";
+            j++;
+        }
+    }
+
+    mask_field.value = maskArray.join(' ');
+    printSlotColoredText();
 }
 
 </script>
