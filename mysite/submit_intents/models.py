@@ -19,8 +19,8 @@ class IntentSlot(models.Model):
     color_hex = models.CharField(max_length=9 , default='#4b4b4b')
     class Meta:
         unique_together = (('intent', 'slot_name'),)
-    def __str__(self):
-        return (self.slot_name)
+    # def __str__(self):
+    #     return (self.slot_name)
     
     @classmethod
     def save_slots(self,intent,new_slot_names):
@@ -69,7 +69,6 @@ colors = {
     "aqua": "#00ffff",
     "azure": "#f0ffff",
     "beige": "#f5f5dc",
-    "black": "#000000",
     "blue": "#0000ff",
     "brown": "#a52a2a",
     "cyan": "#00ffff",
@@ -106,7 +105,5 @@ colors = {
     "purple": "#800080",
     "violet": "#800080",
     "red": "#ff0000",
-    "silver": "#c0c0c0",
-    "white": "#ffffff",
     "yellow": "#ffff00"
 }

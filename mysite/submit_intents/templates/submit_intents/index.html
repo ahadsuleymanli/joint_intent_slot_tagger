@@ -70,7 +70,15 @@ Your message was submitted successfully. Thank you.
         <div id="inlineSection" class="inline-submit-section" style="background-color:rgba(11, 29, 12, 0.178)">
             <div id="radioButtonContainer">
                 {{form.intent_label_choices}}
-                {{form.slots_choices}}
+                <table border="0">
+                {% for slot_choice,slot_name in form.slots_choices.field.choices %}
+                <tr>
+                  <td bgcolor = {{ slot_choice.color_hex }}>
+                    <input type="radio" name="slots_choices" value={{ slot_choice.slot_name }}> {{ slot_choice.slot_name }} &nbsp; <br>
+                  </td>
+                </tr>
+              {% endfor %}
+            </table>
                 <br>
                 <br>
             </div>
@@ -96,15 +104,10 @@ const intent_label_choices = document.getElementById('id_intent_label_choices');
 const radioButtonContainer = document.getElementById("radioButtonContainer");
 const results = document.getElementById("results");
 var form = document.getElementById("submit_intent_form");
-const submit_btn = document.getElementsByName('slots_choices')[0];
-console.log(submit_btn)
-submit_btn.setAttribute("style", "outline:green; ");
+// const submit_btn = document.getElementsByName('slots_choices')[0];
+// // console.log(submit_btn)
+// submit_btn.setAttribute("style", "outline:green; ");
 radiobuttons.forEach(radiobutton => {
-    
-    // radiobutton.name = "1"
-    // radiobutton.setAttribute("style", "color:red; ");
-    // console.log(radiobutton)
-    // radiobutton. = "blue";
     radiobutton.addEventListener('mousedown', e => {
         event.preventDefault();
     }); 
@@ -112,7 +115,6 @@ radiobuttons.forEach(radiobutton => {
 radioButtonContainer.addEventListener('mousedown', e => {
     var targetElement = event.target || event.srcElement;
     if (targetElement == intent_label_choices){
-        
     }
     else
         event.preventDefault();
@@ -124,7 +126,10 @@ function updateForm(){
 }
 intent_label_choices.value = localStorage['id_intent_label_choices'];
 
-
+function getColor(id){
+    console.log(id);
+    return id;
+}
 
 </script>
 

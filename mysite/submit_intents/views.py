@@ -13,11 +13,10 @@ from .forms import *
 
 # Create your views here.
 def index(request):
-    submitted = False
     if request.method == 'POST':
         intent_label = ''
-        form = IntentForm(request.POST)
-        print(form.is_valid())
+        form = SubmitIntentsForm(request.POST)
+        valid = form.is_valid()
         cd = form.cleaned_data
         print(cd)
         if "intent_label_choices" in cd:
@@ -26,16 +25,16 @@ def index(request):
     else:
         if 'intent_label' in request.GET and request.GET["intent_label"]:
             intent = IntentModel.objects.filter(intent_label=request.GET["intent_label"]).first()
-            form = IntentForm(instance=intent)
+            form = SubmitIntentsForm(instance=intent)
         else:
-            form = IntentForm()
+            form = SubmitIntentsForm()
 
     return render(request, 'submit_intents/index.html', {'form': form})
 
 def edit_intents(request):
     if request.method == 'POST':
 
-        form = IntentModelForm(request.POST)
+        form = EditIntentLabelsForm(request.POST)
         form.is_valid()
         cd = form.cleaned_data
         if "new_intent_label_field" in cd:
@@ -52,7 +51,7 @@ def edit_intents(request):
 
         return HttpResponseRedirect('/index/edit_intents')
     else:
-        form = IntentModelForm()
+        form = EditIntentLabelsForm()
     return render(request, 'submit_intents/edit_intents.html', {'form': form})
 
 

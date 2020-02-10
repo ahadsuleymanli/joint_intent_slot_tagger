@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 import json
 from django.core import serializers
 
-class IntentModelForm(forms.ModelForm):
+class EditIntentLabelsForm(forms.ModelForm):
     class Meta:
         model = IntentModel
         fields = ('slots_field',"new_intent_label_field")
@@ -31,7 +31,20 @@ class IntentModelForm(forms.ModelForm):
         self.fields["intent_label_choices"] = forms.ChoiceField(choices=self.INTENT_LABELS,widget=forms.Select(attrs={'onChange':'updateForm()'}))
         
 
-class IntentForm(forms.ModelForm):
+class CustomModelChoiceIterator(forms.models.ModelChoiceIterator):
+    def choice(self, obj):
+        return (self.field.prepare_value(obj),
+                self.field.label_from_instance(obj), obj)
+class CustomModelChoiceField(forms.ModelChoiceField):
+    def _get_choices(self):
+        if hasattr(self, '_choices'):
+            return self._choices
+        return CustomModelChoiceIterator(self)
+    choices = property(_get_choices,  
+                       forms.ChoiceField._set_choices)
+
+
+class SubmitIntentsForm(forms.ModelForm):
     class Meta:
         model = IntentModel
         fields = "__all__"
@@ -48,23 +61,10 @@ class IntentForm(forms.ModelForm):
         for i in range(len(INTENTS)):
             self.INTENT_LABELS.append((INTENTS[i].intent_label,INTENTS[i].intent_label))
 
-        print(self.instance)
         slots = self.instance.intentslot_set.all().values('slot_name','color_hex')
         slots_choices = [(entry["slot_name"],entry["slot_name"]) for entry in slots]
-        print("here",slots_choices)
         self.fields["intent_label_choices"] = forms.ChoiceField(choices=self.INTENT_LABELS,widget=forms.Select(attrs={'onChange':'updateForm()'}))
-        self.fields["slots_choices"] = forms.ChoiceField(choices=slots_choices, widget=forms.RadioSelect(attrs={}))
-
-    # def clean(self):
-    #     cleaned_data = self.cleaned_data
-    #     super(IntentForm, self).clean()
-    #     return cleaned_data
-    # def save(self):
-    #     intent = self.instance
-    #     intent.intent_label = self.cleaned_data["intent_label"]
-    #     intent.intentslot_set.all().delete()
-    #     for slot in self.cleaned_data["slots"]:
-    #        IntentSlot.objects.create(
-    #            intent=intent,
-    #            slot_name=slot,
-    #        )
+        
+        # choices=slots_choices
+        # self.fields["slots_choices"] = forms.ModelChoiceField(queryset=self.instance.intentslot_set.all(),empty_label=None, widget=forms.RadioSelect(attrs={}))
+        self.fields["slots_choices"] = forms.ModelChoiceField(queryset=self.instance.intentslot_set.values('slot_name','color_hex'),empty_label=None, widget=forms.RadioSelect(attrs={}))
