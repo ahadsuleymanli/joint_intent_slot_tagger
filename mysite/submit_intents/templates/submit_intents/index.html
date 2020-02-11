@@ -16,7 +16,7 @@
     }
     .intent-sentence {
     width: 100%;
-    margin: 25px 0px 0px 0px;
+    margin: 25px 0px 0px 5px;
     padding: 5px;
     border: 1px solid #999999;
     height: 35px;
@@ -33,7 +33,7 @@
     border-radius: 4px;
     outline: none;
     display: inline-block;
-    right: 0;
+    right: 5;
     margin: 25px 0px 0px 10px;
     width: 80px;
     color: #fff;
@@ -61,7 +61,7 @@ Your message was submitted successfully. Thank you.
 {% endif %}
 </p>
 <div>
-    <form id="submit_intent_form"action="" method="post" novalidate>
+    <form id="submit_intent_form" action="" method="post" novalidate>
         {% csrf_token %}
         
         <div id="inlineSection" class="inline-submit-section" style="background-color:rgba(11, 29, 12, 0.178)">
@@ -84,29 +84,32 @@ Your message was submitted successfully. Thank you.
               </tr>
             </table>
                 <br>
-                <br>
             </div>
             <span class="sentence-wrapper">
                 {{form.intent_field}}
             </span>
-            <input id="submit_btn" type="submit" value="Submit" class="submit-button">
+            <!-- <div id="submit_btn1" type="submit" value="Submit" class="submit-button"> -->
             <span style="clear: both;"></span>
+            <br><br><br>
+            <span class="sentence-wrapper">
+                {{form.mask_field}}
+            </span>
+                <input hidden id="submit_btn" type="submit" value="Submit" class="submit-button">
+            <span style="clear: both;"></span>
+            <br><br><br><br>
             </div>
-            
+
             <!-- {{ form.intent_field.errors }} -->
             <!-- {{ form.intent_field.help_text }}
             {{ form.non_field_errors }}
             {% for hidden_field in form.hidden_fields %}
                 {{ hidden_field.errors }}
                 {{ hidden_field }} -->
-            {% endfor %}
+            <!-- {% endfor %} -->
         </div>
+        <inp id="coloredTextDiv" max-width="100px" ></div>
         <br>
-        <br>
-        <br>
-        {{form.mask_field}}
-        <div id="coloredTextDiv"><span style="background-color:#00FEFE">Cyan Text</span>
-            <span style="background-color:#00FEFE">Cyan Text</span></div>
+
     </form>
 </div>
 <script>
@@ -114,10 +117,15 @@ const radiobuttons = document.getElementsByName('slots_choices');
 const intent_label_choices = document.getElementById('id_intent_label_choices');
 const radioButtonContainer = document.getElementById("radioButtonContainer");
 const form = document.getElementById("submit_intent_form");
+const submit_btn = document.getElementById("submit_btn");
 const intent_field = document.getElementById("id_intent_field");
 const mask_field = document.getElementById("id_mask_field");
 const coloredTextDiv = document.getElementById("coloredTextDiv");
 const intents_json = JSON.parse("{{form.intents_json|escapejs}}");
+
+submit_btn.style.visibility = 'hidden';
+intent_label_choices.value = localStorage['id_intent_label_choices'];
+
 radiobuttons.forEach(radiobutton => {
     radiobutton.addEventListener('mousedown', e => {
         event.preventDefault();
@@ -125,6 +133,7 @@ radiobuttons.forEach(radiobutton => {
     if (radiobutton.id !== "clearSlots")
         radiobutton.addEventListener('click', function() {
                 updateMask(this.value);
+                selectedDiv();
             }); 
     else
         radiobutton.addEventListener('click', function() {
@@ -143,17 +152,9 @@ function updateForm(){
     localStorage['id_intent_label_choices'] = intent_label_choices.value;
     form.submit();
 }
-intent_label_choices.value = localStorage['id_intent_label_choices'];
 
-
-function printSlotColoredText(){
-    const wordsArray = intent_field.value.replace(/\s\s+/g, ' ').trim().split(' ');
-    const masksArray = maskArray = mask_field.value.split(' ');
-    const intent_name = intent_label_choices.value;
-    const intent_slot_colors = intents_json[intent_name];
-    // coloredTextDiv;
-    console.log(intent_slot_colors)
-    coloredTextDiv.innerHTML = ""
+function printColoredTextToDiv(div, wordsArray, masksArray, intent_slot_colors){
+    div.innerHTML = ""
     if (wordsArray.length === masksArray.length){
         for (var i = 0 ; i<masksArray.length ; i++){
             var newSpan = document.createElement('span');
@@ -161,19 +162,41 @@ function printSlotColoredText(){
             const slotName = masksArray[i].replace('B-','').replace('I-','');
             newSpan.innerHTML = wordsArray[i];
             blankSpan.innerHTML = '&nbsp;';
-            newSpan.style = "background-color:"+intent_slot_colors[slotName];
-            if (masksArray[i].includes("I-"))
-                blankSpan.style = "background-color:"+intent_slot_colors[slotName];
-            coloredTextDiv.appendChild(blankSpan);
-            coloredTextDiv.appendChild(newSpan);
-            
- 
+            if (intent_slot_colors.hasOwnProperty(slotName))
+                color = intent_slot_colors[slotName];
+            else
+                color = "#AAAAAA";
+            if (masksArray[i] !== "O"){
+                newSpan.style = "background-color:"+color;
+                if (masksArray[i].includes("I-"))
+                    blankSpan.style = "background-color:"+color;
+            }
+            div.appendChild(blankSpan);
+            div.appendChild(newSpan);
         }
     }
+}
 
+function printSlotColoredText(){
+    const wordsArray = intent_field.value.replace(/\s\s+/g, ' ').trim().toLowerCase().split(' ');
+    const masksArray = maskArray = mask_field.value.split(' ');
+    const intent_name = intent_label_choices.value;
+    const intent_slot_colors = intents_json[intent_name];
+    // console.log(intent_slot_colors)
+    printColoredTextToDiv(coloredTextDiv,wordsArray, masksArray, intent_slot_colors);
+    if (intent_field.value!=="" && wordsArray.length === masksArray.length)
+        submit_btn.style.visibility = 'visible';
+    else
+        submit_btn.style.visibility = 'hidden';
 }
 // console.log(intents_json);
 printSlotColoredText();
+function selectedDiv(){
+    const selectionStart = coloredTextDiv.selectionStart;
+    const selectionEnd = coloredTextDiv.selectionEnd;
+    // console.log(selectionStart);
+    // console.log(selectionEnd);
+}
 // console.log(intents_json.dsdsa[1].slot_name)
 function updateMask(slot, clear=false){
     const text = intent_field.value.replace(/\s\s+/g, ' ').trim();

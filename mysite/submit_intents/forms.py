@@ -12,6 +12,7 @@ class EditIntentLabelsForm(forms.ModelForm):
     slots_filed_widget = forms.Textarea(attrs={'autocomplete':'off','class':'intent-sentence','placeholder':'slot names here, space speparated'})
     slots_field = forms.CharField(label='', widget=slots_filed_widget)
     new_intent_label_widget = forms.TextInput(attrs={'autocomplete':'off','placeholder':'new intent label'})
+    
     new_intent_label_field = forms.CharField(label='', widget=new_intent_label_widget)
     INTENT_LABELS = []
 
@@ -50,8 +51,9 @@ class SubmitIntentsForm(forms.ModelForm):
         fields = "__all__"
     intent_filed_widget = forms.Textarea(attrs={'autocomplete':'off','class':'intent-sentence','placeholder':'enter intent here',"onChange":"updateMask()"})
     intent_field = forms.CharField(label='', widget=intent_filed_widget)
-    mask_field_widget = forms.Textarea(attrs={"readonly":"","disabled":"", 'autocomplete':'off','class':'intent-sentence','placeholder':'mask will be generated here'})
+    mask_field_widget = forms.TextInput(attrs={"readonly":"", 'autocomplete':'off','class':'intent-sentence','placeholder':'mask will be generated here'})
     mask_field = forms.CharField(label='', widget=mask_field_widget)
+    existing_intent_widget = forms.Textarea(attrs={"readonly":"",'class':'intent-sentence'})
     hidden_mask_field = forms.CharField(widget=forms.HiddenInput())  # A hidden input for internal use
     # slots_choices = forms.ChoiceField( widget=forms.RadioSelect)
     
