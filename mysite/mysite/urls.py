@@ -19,7 +19,7 @@ from django.contrib.auth import views
 from . import contact
 
 urlpatterns = [
-    path('polls/', include('polls.urls')),
+    path('', include('submit_intents.urls')),
     path('admin/', admin.site.urls),
     path('index/', include('submit_intents.urls')),
     path('contact/', contact.contact, name='contact'),

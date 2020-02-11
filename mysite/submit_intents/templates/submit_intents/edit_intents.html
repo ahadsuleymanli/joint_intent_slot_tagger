@@ -34,11 +34,13 @@
 <script>
 const intent_label_choices = document.getElementById('id_intent_label_choices');
 const slots_field = document.getElementById('id_slots_field');
-var intents_json = JSON.parse("{{form.intents_json|escapejs}}");
+const intex_href  = document.getElementById('intex_href');
+const intents_json = JSON.parse("{{form.intents_json|escapejs}}");
 
 console.log(intents_json);
 function updateForm(){
     localStorage['id_intent_label_choices'] = intent_label_choices.value;
+    intex_href.href = "/index?intent_label=" + intent_label_choices.value;
     var id = intent_label_choices.options[intent_label_choices.selectedIndex].value;
     var slotsString = "";
     selected = intents_json[id];
