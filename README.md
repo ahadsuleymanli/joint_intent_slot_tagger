@@ -8,9 +8,9 @@ What you need:
 
 How to run:
 1. clone the repository
---- in the project root directory:
-2. pipenv install
-3. pipenv shell
---- in ./mysite directory:
-4. python manage.py runserver
-5. open http://127.0.0.1:8000/index/ in your browser
+2. cd joint_intent_slot_tagger
+3. pipenv install
+4. pipenv shell
+5. cd mysite
+6. python manage.py runserver
+7. open http://127.0.0.1:8000/index/ in your browser
