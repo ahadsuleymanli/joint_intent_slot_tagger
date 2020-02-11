@@ -11,6 +11,18 @@ from django import forms
 from .models import *
 from .forms import *
 
+
+def add_intent_to_db(label,seq_in,seq_out):
+    seq_in = seq_in.strip().lower().split()
+    seq_out = seq_out.strip().split()
+    if len(seq_in) != len(seq_out):
+        print("seq_in seq_out lengths don't match")
+    else:
+        seq_in = ' '.join(seq_in)
+        seq_out = ' '.join(seq_out)
+        result = IntentInstance.objects.create(label=label,seq_in=seq_in,seq_out=seq_out)
+        print("creating intent instance", result)
+
 # Create your views here.
 def index(request):
     if request.method == 'POST':
@@ -21,6 +33,8 @@ def index(request):
         print(cd)
         if "intent_label_choices" in cd:
             intent_label = cd["intent_label_choices"]
+        if 'submit_btn' in request.POST:
+            add_intent_to_db(cd["intent_label_choices"],cd["seq_in_field"],cd["seq_out_field"])
         return HttpResponseRedirect('/index?intent_label='+intent_label)
     else:
         if 'intent_label' in request.GET and request.GET["intent_label"]:

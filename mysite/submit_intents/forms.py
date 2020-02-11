@@ -49,12 +49,11 @@ class SubmitIntentsForm(forms.ModelForm):
     class Meta:
         model = IntentCategory
         fields = "__all__"
-    intent_filed_widget = forms.Textarea(attrs={'autocomplete':'off','class':'intent-sentence','placeholder':'enter intent here',"onChange":"updateMask()"})
-    intent_field = forms.CharField(label='', widget=intent_filed_widget)
-    mask_field_widget = forms.TextInput(attrs={"readonly":"", 'autocomplete':'off','class':'intent-sentence','placeholder':'mask will be generated here'})
-    mask_field = forms.CharField(label='', widget=mask_field_widget)
+    seq_in_field_widget = forms.Textarea(attrs={'autocomplete':'off','class':'intent-sentence','placeholder':'enter intent here',"onChange":"updateMask()"})
+    seq_in_field = forms.CharField(label='', widget=seq_in_field_widget)
+    seq_out_field_widget = forms.TextInput(attrs={"readonly":"", 'autocomplete':'off','class':'intent-sentence','placeholder':'mask will be generated here'})
+    seq_out_field = forms.CharField(label='', widget=seq_out_field_widget)
     existing_intent_widget = forms.Textarea(attrs={"readonly":"","disabled":"",'class':'intent-sentence'})
-    hidden_mask_field = forms.CharField(widget=forms.HiddenInput())  # A hidden input for internal use
     
     INTENT_LABELS = []
     def __init__(self, *args, **kwargs):
@@ -70,7 +69,10 @@ class SubmitIntentsForm(forms.ModelForm):
             for entry in slots:
                 slotsDict[entry["slot_name"]]=entry["color_hex"]
             INTENT_SLOTS_DICT[INTENTS[i].intent_label] = slotsDict
-        self.fields["intent_label_choices"] = forms.ChoiceField(choices=self.INTENT_LABELS,widget=forms.Select(attrs={'onChange':'updateForm()'}))
-        
-        self.fields["slots_choices"] = forms.ModelChoiceField(queryset=self.instance.intentslot_set.values('slot_name','color_hex'),empty_label=None, widget=forms.RadioSelect(attrs={}))
         self.intents_json = json.dumps(INTENT_SLOTS_DICT)
+        self.fields["intent_label_choices"] = forms.ChoiceField(choices=self.INTENT_LABELS,widget=forms.Select(attrs={'onChange':'updateForm()'}))
+        self.fields["slots_choices"] = forms.ModelChoiceField(queryset=self.instance.intentslot_set.values('slot_name','color_hex'),empty_label=None, widget=forms.RadioSelect(attrs={}))
+        existing_intens = IntentInstance.objects.all().filter(label=self.instance.intent_label).values('label','seq_in','seq_out')
+        existing_intens = [intent for intent in existing_intens]
+        self.fields["existing_intent"] = forms.CharField(label='', widget=self.existing_intent_widget,initial=existing_intens)
+

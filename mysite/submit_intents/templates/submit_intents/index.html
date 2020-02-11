@@ -86,21 +86,21 @@ Your message was submitted successfully. Thank you.
                 <br>
             </div>
             <span class="sentence-wrapper">
-                {{form.intent_field}}
+                {{form.seq_in_field}}
             </span>
             <!-- <div id="submit_btn1" type="submit" value="Submit" class="submit-button"> -->
             <span style="clear: both;"></span>
             <br><br><br>
             <span class="sentence-wrapper">
-                {{form.mask_field}}
+                {{form.seq_out_field}}
             </span>
-                <input hidden id="submit_btn" type="submit" value="Submit" class="submit-button">
+                <input hidden id="submit_btn" name="submit_btn" type="submit" value="Submit" class="submit-button">
             <span style="clear: both;"></span>
             <br><br><br><br>
             </div>
 
-            <!-- {{ form.intent_field.errors }} -->
-            <!-- {{ form.intent_field.help_text }}
+            <!-- {{ form.seq_in_field.errors }} -->
+            <!-- {{ form.seq_in_field.help_text }}
             {{ form.non_field_errors }}
             {% for hidden_field in form.hidden_fields %}
                 {{ hidden_field.errors }}
@@ -108,6 +108,8 @@ Your message was submitted successfully. Thank you.
             <!-- {% endfor %} -->
         </div>
         <inp id="coloredTextDiv" max-width="100px" ></div>
+            
+        {{ form.existing_intent }}
         <br>
 
     </form>
@@ -118,8 +120,8 @@ const intent_label_choices = document.getElementById('id_intent_label_choices');
 const radioButtonContainer = document.getElementById("radioButtonContainer");
 const form = document.getElementById("submit_intent_form");
 const submit_btn = document.getElementById("submit_btn");
-const intent_field = document.getElementById("id_intent_field");
-const mask_field = document.getElementById("id_mask_field");
+const seq_in_field = document.getElementById("id_seq_in_field");
+const seq_out_field = document.getElementById("id_seq_out_field");
 const coloredTextDiv = document.getElementById("coloredTextDiv");
 const intents_json = JSON.parse("{{form.intents_json|escapejs}}");
 
@@ -178,13 +180,13 @@ function printColoredTextToDiv(div, wordsArray, masksArray, intent_slot_colors){
 }
 
 function printSlotColoredText(){
-    const wordsArray = intent_field.value.replace(/\s\s+/g, ' ').trim().toLowerCase().split(' ');
-    const masksArray = maskArray = mask_field.value.split(' ');
+    const wordsArray = seq_in_field.value.replace(/\s\s+/g, ' ').trim().toLowerCase().split(' ');
+    const masksArray = maskArray = seq_out_field.value.split(' ');
     const intent_name = intent_label_choices.value;
     const intent_slot_colors = intents_json[intent_name];
     // console.log(intent_slot_colors)
     printColoredTextToDiv(coloredTextDiv,wordsArray, masksArray, intent_slot_colors);
-    if (intent_field.value!=="" && wordsArray.length === masksArray.length)
+    if (seq_in_field.value!=="" && wordsArray.length === masksArray.length)
         submit_btn.style.visibility = 'visible';
     else
         submit_btn.style.visibility = 'hidden';
@@ -199,44 +201,45 @@ function selectedDiv(){
 }
 // console.log(intents_json.dsdsa[1].slot_name)
 function updateMask(slot, clear=false){
-    const text = intent_field.value.replace(/\s\s+/g, ' ').trim();
-    const selectionStart = intent_field.selectionStart;
-    const selectionEnd = intent_field.selectionEnd;
+    const text = seq_in_field.value.replace(/\s\s+/g, ' ').trim();
+    const selectionStart = seq_in_field.selectionStart;
+    const selectionEnd = seq_in_field.selectionEnd;
     var maskArray;
 
-    if (mask_field.value && mask_field.value.split(' ').length === text.split(' ').length){
-        maskArray = mask_field.value.split(' ');
+    if (seq_out_field.value!=='' && seq_out_field.value.split(' ').length === text.split(' ').length){
+        maskArray = seq_out_field.value.split(' ');
     }else
         maskArray = new Array(text.split(' ').length).fill('O');
-    var atBlank = false; // this is to handle erroneous mutliple blanks
-    var atSlot = false;
-    var bPrefixUsed = false;
-    var j = 0;
-    for (var i = 0; i < text.length; i++) {
-        if (i >= selectionStart && i < selectionEnd)
-            atSlot = true;
-        else if (i > selectionEnd)
-            atSlot = false;
-        if (text.charAt(i)!==' ' && atBlank){
-            atBlank = false;
-        }
-        if ((text.charAt(i)===' ' || i===text.length-1) && !atBlank){
-            atBlank = true;
-            if (atSlot && !clear){
-                if (!bPrefixUsed){
-                    maskArray[j]="B-"+slot;
-                    bPrefixUsed = true;
-                }
-                else
-                    maskArray[j]="I-"+slot;
+    if (slot!=undefined){
+        var atBlank = false; // this is to handle erroneous mutliple blanks
+        var atSlot = false;
+        var bPrefixUsed = false;
+        var j = 0;
+        for (var i = 0; i < text.length; i++) {
+            if (i >= selectionStart && i < selectionEnd)
+                atSlot = true;
+            else if (i > selectionEnd)
+                atSlot = false;
+            if (text.charAt(i)!==' ' && atBlank){
+                atBlank = false;
             }
-            else if (atSlot)
-                maskArray[j]="O";
-            j++;
+            if ((text.charAt(i)===' ' || i===text.length-1) && !atBlank){
+                atBlank = true;
+                if (atSlot && !clear){
+                    if (!bPrefixUsed){
+                        maskArray[j]="B-"+slot;
+                        bPrefixUsed = true;
+                    }
+                    else
+                        maskArray[j]="I-"+slot;
+                }
+                else if (atSlot)
+                    maskArray[j]="O";
+                j++;
+            }
         }
     }
-
-    mask_field.value = maskArray.join(' ');
+    seq_out_field.value = maskArray.join(' ');
     printSlotColoredText();
 }
 
