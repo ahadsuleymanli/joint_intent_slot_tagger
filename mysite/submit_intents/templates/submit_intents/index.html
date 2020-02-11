@@ -2,59 +2,104 @@
 {% block content %}
 <style>
     .inline-submit-section {
-    position: relative;
-    width: 100%;
+        position: relative;
+        width: 100%;
     }
     .sentence-wrapper {
-    position: absolute;
-    display: inline-block;
-    -webkit-box-sizing: border-box;
-    -moz-box-sizing: border-box;
-    box-sizing: border-box;
-    left: 0;
-    right: 100px;
+        position: absolute;
+        display: inline-block;
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+        left: 0;
+        right: 100px;
     }
     .intent-sentence {
-    width: 100%;
-    margin: 25px 0px 0px 5px;
-    padding: 5px;
-    border: 1px solid #999999;
-    height: 35px;
-    
-    -webkit-box-sizing: border-box;
-    -moz-box-sizing: border-box;
-    box-sizing: border-box;
+        width: 100%;
+        margin: 25px 0px 0px 5px;
+        padding: 5px;
+        border: 1px solid #999999;
+        height: 35px;
+        
+        -webkit-box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
     }
     .submit-button {
-    position: absolute;
-    background-color: #4CAF50;
-    text-align: center;
-    border: none;
-    border-radius: 4px;
-    outline: none;
-    display: inline-block;
-    right: 5;
-    margin: 25px 0px 0px 10px;
-    width: 80px;
-    color: #fff;
-    padding: 7px;
-    font-style: italic;
-    cursor: pointer;
+        position: absolute;
+        background-color: #4CAF50;
+        text-align: center;
+        border: none;
+        border-radius: 4px;
+        outline: none;
+        display: inline-block;
+        right: 5;
+        margin: 25px 0px 0px 10px;
+        width: 80px;
+        color: #fff;
+        padding: 7px;
+        font-style: italic;
+        cursor: pointer;
 
-    box-shadow: 0 3px #999;
+        box-shadow: 0 3px #999;
     }
     .submit-button:hover {
-    background-color: #3e8e41;
+        background-color: #3e8e41;
     }
     .submit-button:active {
-    background-color: #3e8e41;
-    box-shadow: 0 2px #666;
-    transform: translateY(1px);
+        background-color: #3e8e41;
+        box-shadow: 0 2px #666;
+        transform: translateY(1px);
+    }
+    .delete-button {
+        background-color: #8e0000;
+        text-align: center;
+        border: none;
+        border-radius: 4px;
+        outline: none;
+        display: inline-block;
+        right: 5;
+        width: 80px;
+        color: #fff;
+        padding: 7px;
+        font-style: italic;
+        cursor: pointer;
+
+        box-shadow: 0 3px #999;
+    }
+    .delete-button:hover {
+        background-color: #8e3e59;
+    }
+    .delete-button:active {
+        background-color: #6e3e56;
+        box-shadow: 0 2px #666;
+        transform: translateY(1px);
+    }
+    .existingIntents-table {
+        font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+        border-collapse: collapse;
+        width: 100%;
     }
 
+    .existingIntents-table td, .existingIntents-table th {
+        border: 1px solid #ddd;
+        padding: 8px;
+    }
+
+    .existingIntents-table tr:nth-child(even){background-color: #f2f2f2;}
+
+    .existingIntents-table tr:hover {background-color: #ddd;}
+
+    .existingIntents-table th {
+        padding-top: 12px;
+        padding-bottom: 12px;
+        text-align: left;
+        background-color: #4CAF50;
+        color: white;
+    }
 </style>
 <body>
-<h2>Text Select Example</h2>
+<h2>Submit Intents</h2>
 {% if submitted %}
 <p class="success">
 Your message was submitted successfully. Thank you.
@@ -107,11 +152,18 @@ Your message was submitted successfully. Thank you.
                 {{ hidden_field }} -->
             <!-- {% endfor %} -->
         </div>
-        <inp id="coloredTextDiv" max-width="100px" ></div>
-            
-        {{ form.existing_intent }}
+        <div id="currentIntentDiv"></div>
+        <b>Existing Intents:</b><br>
+        <div id="existingIntentsDiv">
+            <table id="existingIntentsTable" class="existingIntents-table">
+                <tr>
+                    <td>empty...</td>
+                </tr>
+            </table>
+        </div>
+        <!-- {{ form.existing_intent }} -->
         <br>
-
+        {{form.intent_id_to_delete}}
     </form>
 </div>
 <script>
@@ -122,11 +174,15 @@ const form = document.getElementById("submit_intent_form");
 const submit_btn = document.getElementById("submit_btn");
 const seq_in_field = document.getElementById("id_seq_in_field");
 const seq_out_field = document.getElementById("id_seq_out_field");
-const coloredTextDiv = document.getElementById("coloredTextDiv");
+const currentIntentDiv = document.getElementById("currentIntentDiv");
+const existingIntentsTable = document.getElementById("existingIntentsTable");
 const intents_json = JSON.parse("{{form.intents_json|escapejs}}");
-
+const existing_intents_json = JSON.parse("{{form.existing_intents_json|escapejs}}");
+const intent_id_to_delete = document.getElementById("id_intent_id_to_delete");
+console.log(existing_intents_json);
 submit_btn.style.visibility = 'hidden';
 intent_label_choices.value = localStorage['id_intent_label_choices'];
+displayExistingIntentsColored();
 
 radiobuttons.forEach(radiobutton => {
     radiobutton.addEventListener('mousedown', e => {
@@ -135,12 +191,11 @@ radiobuttons.forEach(radiobutton => {
     if (radiobutton.id !== "clearSlots")
         radiobutton.addEventListener('click', function() {
                 updateMask(this.value);
-                selectedDiv();
             }); 
     else
         radiobutton.addEventListener('click', function() {
-                    updateMask("",true);
-                }); 
+                updateMask("",true);
+            }); 
 });
 radioButtonContainer.addEventListener('mousedown', e => {
     var targetElement = event.target || event.srcElement;
@@ -155,8 +210,17 @@ function updateForm(){
     form.submit();
 }
 
-function printColoredTextToDiv(div, wordsArray, masksArray, intent_slot_colors){
-    div.innerHTML = ""
+function removeIntent(id){
+    if (id){
+        intent_id_to_delete.value = id;
+        form.submit();
+    }
+
+}
+
+function appendColoredTextToDiv(div, wordsArray, masksArray, slot_colors, clear=false){
+    if (clear)
+        div.innerHTML = ""
     if (wordsArray.length === masksArray.length){
         for (var i = 0 ; i<masksArray.length ; i++){
             var newSpan = document.createElement('span');
@@ -164,8 +228,8 @@ function printColoredTextToDiv(div, wordsArray, masksArray, intent_slot_colors){
             const slotName = masksArray[i].replace('B-','').replace('I-','');
             newSpan.innerHTML = wordsArray[i];
             blankSpan.innerHTML = '&nbsp;';
-            if (intent_slot_colors.hasOwnProperty(slotName))
-                color = intent_slot_colors[slotName];
+            if (slot_colors.hasOwnProperty(slotName))
+                color = slot_colors[slotName];
             else
                 color = "#AAAAAA";
             if (masksArray[i] !== "O"){
@@ -178,28 +242,51 @@ function printColoredTextToDiv(div, wordsArray, masksArray, intent_slot_colors){
         }
     }
 }
+// existing_intents_json
 
-function printSlotColoredText(){
+function displayExistingIntentsColored(){
+    var wordsArray;
+    var masksArray;
+    var intent_name;
+    var slot_colors;
+    existingIntentsTable.innerHTML = ""
+    for (var i=0;i<existing_intents_json.length;i++){
+        // console.log(existing_intents_json[i])
+        wordsArray = existing_intents_json[i]["seq_in"].split(' ');
+        masksArray = existing_intents_json[i]["seq_out"].split(' ');
+        intent_name = existing_intents_json[i]["label"];
+        slot_colors = intents_json[intent_name];
+        var row = existingIntentsTable.insertRow(-1);
+        var cell1 = row.insertCell(0);
+        var cell2 = row.insertCell(1);
+        cell2.align="center";
+        var deleteButton = document.createElement("BUTTON");
+        deleteButton.name = "deleteCell";
+        const intentId = existing_intents_json[i]["id"];
+        deleteButton.addEventListener('click', function() {removeIntent(intentId);}, false);
+        
+        deleteButton.innerHTML = "delete";
+        deleteButton.className="delete-button";
+        cell2.appendChild(deleteButton);
+        
+        appendColoredTextToDiv(cell1,wordsArray, masksArray, slot_colors);
+        // existingIntentsDiv.appendChild(document.createElement("br"));
+    }
+
+}
+
+function displayCurrentIntentColored(){
     const wordsArray = seq_in_field.value.replace(/\s\s+/g, ' ').trim().toLowerCase().split(' ');
     const masksArray = maskArray = seq_out_field.value.split(' ');
     const intent_name = intent_label_choices.value;
-    const intent_slot_colors = intents_json[intent_name];
-    // console.log(intent_slot_colors)
-    printColoredTextToDiv(coloredTextDiv,wordsArray, masksArray, intent_slot_colors);
+    const slot_colors = intents_json[intent_name];
+    appendColoredTextToDiv(currentIntentDiv,wordsArray, masksArray, slot_colors, clear=true);
     if (seq_in_field.value!=="" && wordsArray.length === masksArray.length)
         submit_btn.style.visibility = 'visible';
     else
         submit_btn.style.visibility = 'hidden';
 }
-// console.log(intents_json);
-printSlotColoredText();
-function selectedDiv(){
-    const selectionStart = coloredTextDiv.selectionStart;
-    const selectionEnd = coloredTextDiv.selectionEnd;
-    // console.log(selectionStart);
-    // console.log(selectionEnd);
-}
-// console.log(intents_json.dsdsa[1].slot_name)
+
 function updateMask(slot, clear=false){
     const text = seq_in_field.value.replace(/\s\s+/g, ' ').trim();
     const selectionStart = seq_in_field.selectionStart;
@@ -240,7 +327,7 @@ function updateMask(slot, clear=false){
         }
     }
     seq_out_field.value = maskArray.join(' ');
-    printSlotColoredText();
+    displayCurrentIntentColored();
 }
 
 </script>

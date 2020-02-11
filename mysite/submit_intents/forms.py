@@ -32,17 +32,17 @@ class EditIntentLabelsForm(forms.ModelForm):
         self.fields["intent_label_choices"] = forms.ChoiceField(choices=self.INTENT_LABELS,widget=forms.Select(attrs={'onChange':'updateForm()'}))
         
 
-class CustomModelChoiceIterator(forms.models.ModelChoiceIterator):
-    def choice(self, obj):
-        return (self.field.prepare_value(obj),
-                self.field.label_from_instance(obj), obj)
-class CustomModelChoiceField(forms.ModelChoiceField):
-    def _get_choices(self):
-        if hasattr(self, '_choices'):
-            return self._choices
-        return CustomModelChoiceIterator(self)
-    choices = property(_get_choices,  
-                       forms.ChoiceField._set_choices)
+# class CustomModelChoiceIterator(forms.models.ModelChoiceIterator):
+#     def choice(self, obj):
+#         return (self.field.prepare_value(obj),
+#                 self.field.label_from_instance(obj), obj)
+# class CustomModelChoiceField(forms.ModelChoiceField):
+#     def _get_choices(self):
+#         if hasattr(self, '_choices'):
+#             return self._choices
+#         return CustomModelChoiceIterator(self)
+#     choices = property(_get_choices,  
+#                        forms.ChoiceField._set_choices)
 
 
 class SubmitIntentsForm(forms.ModelForm):
@@ -54,7 +54,8 @@ class SubmitIntentsForm(forms.ModelForm):
     seq_out_field_widget = forms.TextInput(attrs={"readonly":"", 'autocomplete':'off','class':'intent-sentence','placeholder':'mask will be generated here'})
     seq_out_field = forms.CharField(label='', widget=seq_out_field_widget)
     existing_intent_widget = forms.Textarea(attrs={"readonly":"","disabled":"",'class':'intent-sentence'})
-    
+    intent_id_to_delete = forms.CharField(widget = forms.HiddenInput(), required = False)
+
     INTENT_LABELS = []
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -72,7 +73,9 @@ class SubmitIntentsForm(forms.ModelForm):
         self.intents_json = json.dumps(INTENT_SLOTS_DICT)
         self.fields["intent_label_choices"] = forms.ChoiceField(choices=self.INTENT_LABELS,widget=forms.Select(attrs={'onChange':'updateForm()'}))
         self.fields["slots_choices"] = forms.ModelChoiceField(queryset=self.instance.intentslot_set.values('slot_name','color_hex'),empty_label=None, widget=forms.RadioSelect(attrs={}))
-        existing_intens = IntentInstance.objects.all().filter(label=self.instance.intent_label).values('label','seq_in','seq_out')
+        existing_intens = IntentInstance.objects.all().filter(label=self.instance.intent_label).values('id','label','seq_in','seq_out')
         existing_intens = [intent for intent in existing_intens]
-        self.fields["existing_intent"] = forms.CharField(label='', widget=self.existing_intent_widget,initial=existing_intens)
+        self.existing_intents_json = json.dumps(existing_intens)
+
+        # self.fields["existing_intent"] = forms.CharField(label='', widget=self.existing_intent_widget,initial=existing_intens)
 

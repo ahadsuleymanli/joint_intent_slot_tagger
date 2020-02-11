@@ -23,6 +23,10 @@ def add_intent_to_db(label,seq_in,seq_out):
         result = IntentInstance.objects.create(label=label,seq_in=seq_in,seq_out=seq_out)
         print("creating intent instance", result)
 
+def delete_intent_from_db(id):
+    if id.isdigit():
+        IntentInstance.objects.filter(pk=id).delete()
+
 # Create your views here.
 def index(request):
     if request.method == 'POST':
@@ -35,6 +39,8 @@ def index(request):
             intent_label = cd["intent_label_choices"]
         if 'submit_btn' in request.POST:
             add_intent_to_db(cd["intent_label_choices"],cd["seq_in_field"],cd["seq_out_field"])
+        elif "intent_id_to_delete" in cd:
+            delete_intent_from_db(cd["intent_id_to_delete"])
         return HttpResponseRedirect('/index?intent_label='+intent_label)
     else:
         if 'intent_label' in request.GET and request.GET["intent_label"]:

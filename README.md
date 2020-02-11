@@ -1,5 +1,7 @@
-This is wip.
-Django code is a bit messy right now, will be cleaned up later.
+This is a self contained web service for Goo format data labelling.
+The format is specified in Slot-Gated Modeling for Joint Slot Filling and Intent Prediction (Goo et al):
+B-[slotname] I-[slotname] O
+data is stored in seq.in, seq.out, label files one line per text sample
 
 What you need:
 - Python 3.6
