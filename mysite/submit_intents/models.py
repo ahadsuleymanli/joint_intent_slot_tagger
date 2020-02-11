@@ -1,6 +1,12 @@
 from django.db import models
 
-class IntentModel(models.Model):
+class IntentInstance(models.Model):
+    label = models.CharField(max_length=50)
+    seq_in = models.CharField(max_length=255,default='')
+    seq_out = models.CharField(max_length=255,default='')
+
+
+class IntentCategory(models.Model):
     intent_label = models.CharField(max_length=50)
     class Meta:
         constraints = [
@@ -10,11 +16,11 @@ class IntentModel(models.Model):
         '''
             ensures the unique key
         '''
-        if not IntentModel.objects.filter(intent_label=self.intent_label):
+        if not IntentCategory.objects.filter(intent_label=self.intent_label):
             super().save(*args, **kwargs)
 
 class IntentSlot(models.Model):
-    intent = models.ForeignKey(IntentModel, on_delete=models.CASCADE)
+    intent = models.ForeignKey(IntentCategory, on_delete=models.CASCADE)
     slot_name = models.CharField(max_length=50)
     color_hex = models.CharField(max_length=9 , default='#4b4b4b')
     class Meta:

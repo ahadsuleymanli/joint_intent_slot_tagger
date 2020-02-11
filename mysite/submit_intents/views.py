@@ -24,7 +24,7 @@ def index(request):
         return HttpResponseRedirect('/index?intent_label='+intent_label)
     else:
         if 'intent_label' in request.GET and request.GET["intent_label"]:
-            intent = IntentModel.objects.filter(intent_label=request.GET["intent_label"]).first()
+            intent = IntentCategory.objects.filter(intent_label=request.GET["intent_label"]).first()
             form = SubmitIntentsForm(instance=intent)
         else:
             form = SubmitIntentsForm(request.POST)
@@ -39,11 +39,11 @@ def edit_intents(request):
         cd = form.cleaned_data
         if "new_intent_label_field" in cd:
             if 'remove_intent_label' in request.POST:
-                IntentModel.objects.filter(intent_label=cd["new_intent_label_field"]).delete()
+                IntentCategory.objects.filter(intent_label=cd["new_intent_label_field"]).delete()
             elif 'add_intent_label' in request.POST:
-                IntentModel.objects.create(intent_label=cd["new_intent_label_field"])
+                IntentCategory.objects.create(intent_label=cd["new_intent_label_field"])
         elif "intent_label_choices" in cd and 'update_slots' in request.POST:
-            intent = get_object_or_404(IntentModel, intent_label=cd["intent_label_choices"])
+            intent = get_object_or_404(IntentCategory, intent_label=cd["intent_label_choices"])
             intent.intentslot_set.all().delete()
             if "slots_field" in cd:
                 for word in cd["slots_field"].split():
