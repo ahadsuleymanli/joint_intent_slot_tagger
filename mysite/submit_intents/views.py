@@ -12,7 +12,7 @@ from .models import *
 from .forms import *
 
 
-def add_intent_to_db(label,seq_in,seq_out):
+def add_intent_to_db(label, seq_in, seq_out, id=None):
     seq_in = seq_in.strip().lower().split()
     seq_out = seq_out.strip().split()
     if len(seq_in) != len(seq_out):
@@ -20,8 +20,14 @@ def add_intent_to_db(label,seq_in,seq_out):
     else:
         seq_in = ' '.join(seq_in)
         seq_out = ' '.join(seq_out)
-        result = IntentInstance.objects.create(label=label,seq_in=seq_in,seq_out=seq_out)
-        print("creating intent instance", result)
+        if id and id.isdigit():
+            found_object = IntentInstance.objects.get(pk=id)
+            if found_object:
+                found_object.seq_in=seq_in
+                found_object.seq_out=seq_out
+                found_object.save()
+        else:
+            IntentInstance.objects.create(label=label,seq_in=seq_in,seq_out=seq_out)
 
 def delete_intent_from_db(id):
     if id.isdigit():
@@ -38,9 +44,13 @@ def index(request):
         if "intent_label_choices" in cd:
             intent_label = cd["intent_label_choices"]
         if 'submit_btn' in request.POST:
-            add_intent_to_db(cd["intent_label_choices"],cd["seq_in_field"],cd["seq_out_field"])
+            if "intent_id_to_modify" in cd :
+                add_intent_to_db(cd["intent_label_choices"],cd["seq_in_field"],cd["seq_out_field"],cd["intent_id_to_modify"])
+            else:
+                add_intent_to_db(cd["intent_label_choices"],cd["seq_in_field"],cd["seq_out_field"])
         elif "intent_id_to_delete" in cd:
             delete_intent_from_db(cd["intent_id_to_delete"])
+
         return HttpResponseRedirect('/index?intent_label='+intent_label)
     else:
         if 'intent_label' in request.GET and request.GET["intent_label"]:

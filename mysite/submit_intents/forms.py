@@ -55,6 +55,7 @@ class SubmitIntentsForm(forms.ModelForm):
     seq_out_field = forms.CharField(label='', widget=seq_out_field_widget)
     existing_intent_widget = forms.Textarea(attrs={"readonly":"","disabled":"",'class':'intent-sentence'})
     intent_id_to_delete = forms.CharField(widget = forms.HiddenInput(), required = False)
+    intent_id_to_modify = forms.CharField(widget = forms.HiddenInput(), required = False)
 
     INTENT_LABELS = []
     def __init__(self, *args, **kwargs):

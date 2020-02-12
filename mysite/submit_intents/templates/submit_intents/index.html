@@ -97,6 +97,18 @@
         background-color: #4CAF50;
         color: white;
     }
+    .styled-text {
+    padding-left: 5px;
+    padding-right: 5px;
+    text-indent: 50px;
+    text-align: justify;
+    letter-spacing: 3px;
+    }
+
+    .colored-text {
+    text-decoration: none;
+    color: #008CBA;
+    }
 </style>
 <body>
 <h2>Submit Intents</h2>
@@ -130,16 +142,17 @@ Your message was submitted successfully. Thank you.
             </table>
                 <br>
             </div>
+            <span id="inputStatusText" class="styled-text"></span>
             <span class="sentence-wrapper">
                 {{form.seq_in_field}}
             </span>
-            <!-- <div id="submit_btn1" type="submit" value="Submit" class="submit-button"> -->
+                <input id="cancel_btn" name="cancel_btn" value="Cancel" class="submit-button" onclick="formAppearance.disallowEdit()">
             <span style="clear: both;"></span>
             <br><br><br>
             <span class="sentence-wrapper">
                 {{form.seq_out_field}}
             </span>
-                <input hidden id="submit_btn" name="submit_btn" type="submit" value="Submit" class="submit-button">
+                <input id="submit_btn" name="submit_btn" type="submit" value="Submit" class="submit-button">
             <span style="clear: both;"></span>
             <br><br><br><br>
             </div>
@@ -164,6 +177,7 @@ Your message was submitted successfully. Thank you.
         <!-- {{ form.existing_intent }} -->
         <br>
         {{form.intent_id_to_delete}}
+        {{form.intent_id_to_modify}}
     </form>
 </div>
 <script>
@@ -171,18 +185,47 @@ const radiobuttons = document.getElementsByName('slots_choices');
 const intent_label_choices = document.getElementById('id_intent_label_choices');
 const radioButtonContainer = document.getElementById("radioButtonContainer");
 const form = document.getElementById("submit_intent_form");
-const submit_btn = document.getElementById("submit_btn");
+ 
 const seq_in_field = document.getElementById("id_seq_in_field");
 const seq_out_field = document.getElementById("id_seq_out_field");
 const currentIntentDiv = document.getElementById("currentIntentDiv");
 const existingIntentsTable = document.getElementById("existingIntentsTable");
 const intents_json = JSON.parse("{{form.intents_json|escapejs}}");
 const existing_intents_json = JSON.parse("{{form.existing_intents_json|escapejs}}");
-const intent_id_to_delete = document.getElementById("id_intent_id_to_delete");
-console.log(existing_intents_json);
-submit_btn.style.visibility = 'hidden';
+
 intent_label_choices.value = localStorage['id_intent_label_choices'];
 displayExistingIntentsColored();
+
+class FormAppearance {
+  constructor() {
+    this.submit_btn = document.getElementById("submit_btn");
+    this.cancel_btn = document.getElementById("cancel_btn");
+    this.intent_id_to_modify = document.getElementById("id_intent_id_to_modify");
+    this.inputStatusText = document.getElementById("inputStatusText");
+    this.submit_btn.style.visibility = 'hidden';
+    this.cancel_btn.style.visibility = 'hidden'; 
+  }
+  allowSubmit(){
+    this.submit_btn.style.visibility = 'visible';
+  }
+  disallowSubmit(){
+    this.submit_btn.style.visibility = 'hidden';
+  }
+  allowEdit(id, seq_in, seq_out){
+    this.cancel_btn.style.visibility = 'visible';
+    this.inputStatusText.innerHTML="Editing:";
+    this.intent_id_to_modify.value = id;
+    seq_in_field.value = seq_in;
+    seq_out_field.value = seq_out;
+    displayCurrentIntentColored();
+  }
+  disallowEdit(){
+    this.cancel_btn.style.visibility = 'hidden';
+    this.inputStatusText.innerHTML="";
+    this.intent_id_to_modify.value = '';
+  }
+}
+const formAppearance = new FormAppearance();
 
 radiobuttons.forEach(radiobutton => {
     radiobutton.addEventListener('mousedown', e => {
@@ -212,7 +255,7 @@ function updateForm(){
 
 function removeIntent(id){
     if (id){
-        intent_id_to_delete.value = id;
+        document.getElementById("id_intent_id_to_delete").value = id;
         form.submit();
     }
 
@@ -245,31 +288,30 @@ function appendColoredTextToDiv(div, wordsArray, masksArray, slot_colors, clear=
 // existing_intents_json
 
 function displayExistingIntentsColored(){
-    var wordsArray;
-    var masksArray;
     var intent_name;
     var slot_colors;
     existingIntentsTable.innerHTML = ""
     for (var i=0;i<existing_intents_json.length;i++){
         // console.log(existing_intents_json[i])
-        wordsArray = existing_intents_json[i]["seq_in"].split(' ');
-        masksArray = existing_intents_json[i]["seq_out"].split(' ');
+        const seq_in = existing_intents_json[i]["seq_in"];
+        const seq_out = existing_intents_json[i]["seq_out"];
         intent_name = existing_intents_json[i]["label"];
         slot_colors = intents_json[intent_name];
         var row = existingIntentsTable.insertRow(-1);
-        var cell1 = row.insertCell(0);
-        var cell2 = row.insertCell(1);
-        cell2.align="center";
+        var cell0 = row.insertCell(0);
+        var cell1 = row.insertCell(1);
+        cell1.align="center";
         var deleteButton = document.createElement("BUTTON");
         deleteButton.name = "deleteCell";
         const intentId = existing_intents_json[i]["id"];
+        cell0.addEventListener('click', function() {formAppearance.allowEdit(intentId, seq_in, seq_out);}, false);
         deleteButton.addEventListener('click', function() {removeIntent(intentId);}, false);
         
         deleteButton.innerHTML = "delete";
         deleteButton.className="delete-button";
-        cell2.appendChild(deleteButton);
+        cell1.appendChild(deleteButton);
         
-        appendColoredTextToDiv(cell1,wordsArray, masksArray, slot_colors);
+        appendColoredTextToDiv(cell0, seq_in.split(' '), seq_out.split(' '), slot_colors);
         // existingIntentsDiv.appendChild(document.createElement("br"));
     }
 
@@ -282,9 +324,9 @@ function displayCurrentIntentColored(){
     const slot_colors = intents_json[intent_name];
     appendColoredTextToDiv(currentIntentDiv,wordsArray, masksArray, slot_colors, clear=true);
     if (seq_in_field.value!=="" && wordsArray.length === masksArray.length)
-        submit_btn.style.visibility = 'visible';
+        formAppearance.allowSubmit();
     else
-        submit_btn.style.visibility = 'hidden';
+        formAppearance.disallowSubmit();
 }
 
 function updateMask(slot, clear=false){
@@ -303,7 +345,7 @@ function updateMask(slot, clear=false){
         var bPrefixUsed = false;
         var j = 0;
         for (var i = 0; i < text.length; i++) {
-            if (i >= selectionStart && i < selectionEnd)
+            if (i >= selectionStart && i < selectionEnd && text.charAt(i)!==' ')
                 atSlot = true;
             else if (i > selectionEnd)
                 atSlot = false;
