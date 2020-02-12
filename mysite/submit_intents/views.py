@@ -10,6 +10,7 @@ from django.utils import timezone
 from django import forms
 from .models import *
 from .forms import *
+from .create_dataset import CreateDataset
 
 
 def add_intent_to_db(label, seq_in, seq_out, id=None):
@@ -33,7 +34,6 @@ def delete_intent_from_db(id):
     if id.isdigit():
         IntentInstance.objects.filter(pk=id).delete()
 
-# Create your views here.
 def index(request):
     if request.method == 'POST':
         intent_label = ''
@@ -89,3 +89,12 @@ def view(request):
     template = loader.get_template('submit_intents/view.html')
     context = {}
     return HttpResponse(template.render(context, request))
+
+
+def export_dataset(request):
+    if request.method == 'POST':
+        if "export_dataset" in request.POST: 
+            CreateDataset.create_dataset()
+        return HttpResponseRedirect('/index/export_dataset')
+
+    return render(request, 'submit_intents/export_dataset.html')

@@ -8,11 +8,16 @@
 <header id="header">
     <div id="logo"> ...
     <div id="top_menu">
-    <a id="intex_href" href="/index">Home</a> | Help |
-    <a href="/index/edit_intents">Intent Slots</a>
+    <a id="intex_href" href="/index">Submit Intets</a> |
+    <a href="/index/edit_intents">Edit Slots</a> |
+    <a href="/index/export_dataset">Export Dataset</a> | Help
     <!-- <a href="/contact">Contact Us</a> -->
     </div>
 <div id="content">
     {% block content %}{% endblock %}
 </div>
+<script>
+    document.getElementById('intex_href').href = "/index?intent_label=" + localStorage['id_intent_label_choices'];
+</script>
 </html>
+

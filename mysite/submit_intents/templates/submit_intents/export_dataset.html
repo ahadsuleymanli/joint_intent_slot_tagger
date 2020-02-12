@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<form id="edit_intent_form" action="" method="post" novalidate>
+    {% csrf_token %}
+    <div id="inlineSection" class="inline-submit-section" style="background-color:rgba(11, 29, 12, 0.178)">
+        <input id="export_dataset" name="export_dataset" type="submit" value="export_dataset" class="submit-button">
+    </div>
+</form>
+
+{% endblock content %}

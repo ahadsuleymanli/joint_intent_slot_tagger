@@ -7,4 +7,5 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('view/', views.view, name='view'),
     path('edit_intents/', views.edit_intents, name='edit_intents'),
+    path('export_dataset/', views.export_dataset, name='export_dataset'),
 ]
