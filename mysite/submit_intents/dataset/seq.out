@@ -1,10 +1,8 @@
-O O O O O
-O O
-O O B-slot3 O
-O O O
-O O O
-O O O O O B-city O B-date I-date
-O B-slot4
-O O O
-O O O O O
-O O O O B-city B-date I-date I-date I-date I-date
+B-inquiry I-inquiry I-inquiry I-inquiry O B-city B-date I-date
+O B-artist B-album O O B-playlist I-playlist O
+O O B-date I-date I-date O B-activity I-activity I-activity I-activity
+O O B-city O B-date I-date I-date I-date B-date I-date I-date
+B-activity I-activity I-activity I-activity B-location I-location I-location I-location B-date I-date I-date
+O O O O B-city B-date
+B-activity I-activity I-activity I-activity O O B-date I-date I-date I-date I-date B-date I-date I-date
+O O O O B-cold O B-city O B-date I-date
