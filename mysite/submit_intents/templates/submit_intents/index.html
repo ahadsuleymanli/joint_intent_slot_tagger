@@ -16,7 +16,7 @@
     }
     .intent-sentence {
         width: 100%;
-        margin: 25px 0px 0px 5px;
+        margin: 10px 0px 0px 5px;
         padding: 5px;
         border: 1px solid #999999;
         height: 35px;
@@ -109,6 +109,39 @@
     text-decoration: none;
     color: #008CBA;
     }
+    #existingIntentsDiv {
+    position: fixed;
+    bottom: 0;
+    top:500;
+    width: 95%;
+    overflow: auto;
+    }
+    .grid-container {
+    width: min-content;
+    display: grid;
+    grid-template-columns: auto auto auto;
+    padding: 10px;
+    }
+    .slotBtn {
+        background-color: #4CAF50; /* Green */
+        border: 1px solid gray;
+        /* color: white; */
+        padding: 3px 3px;
+        min-width: 90px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        /* font-size: 16px; */
+        margin: 4px 2px;
+        cursor: pointer;
+    }
+    .slotBtn:hover {
+        border: 1px solid rgba(0, 0, 0, 0.8);
+    }
+    .slotBtn:active {
+        transform: translateY(1px);
+    }
+
 </style>
 <body>
 <h2>Submit Intents</h2>
@@ -125,24 +158,21 @@ Your message was submitted successfully. Thank you.
             <div id="radioButtonContainer">
                 {{form.intent_label_choices}}
                 <!-- {{form.intent_label_choices.errors}} -->
-                <table border="0">
+                <div class="grid-container">
                 {% for slot_choice,slot_name in form.slots_choices.field.choices %}
-                <tr>
-                  <td>
-                    <input type="button" name="slots_choices" style= "background-color: {{ slot_choice.color_hex }}" value={{ slot_choice.slot_name }}> <br>
-                  </td>
-                </tr>
-                <!-- &nbsp; -->
-              {% endfor %}
-              <tr>
-                <td>
-                  <input type="button" id="clearSlots" name="slots_choices" style= "background-color: silver" value="clear slot"> <br>
-                </td>
-              </tr>
-            </table>
-                <br>
+
+                    <input class="slotBtn" type="button" name="slots_choices" style= "background-color: {{ slot_choice.color_hex }}" value={{ slot_choice.slot_name }}>
+
+
+                {% endfor %}
+
+
+                  <input class="slotBtn" type="button" id="clearSlots" name="slots_choices" style= "background-color: #C0C0C0" value="clear slot"> <br>
+
+                </div>
             </div>
             <span id="inputStatusText" class="styled-text"></span>
+            <br>
             <span class="sentence-wrapper">
                 {{form.seq_in_field}}
             </span>
@@ -154,7 +184,7 @@ Your message was submitted successfully. Thank you.
             </span>
                 <input id="submit_btn" name="submit_btn" type="submit" value="Submit" class="submit-button">
             <span style="clear: both;"></span>
-            <br><br><br><br>
+            <br><br><br>
             </div>
 
             <!-- {{ form.seq_in_field.errors }} -->
@@ -165,9 +195,9 @@ Your message was submitted successfully. Thank you.
                 {{ hidden_field }} -->
             <!-- {% endfor %} -->
         </div>
-        <div id="currentIntentDiv"><br></div>
-        <b>Existing Intents:</b><br>
-        <div id="existingIntentsDiv">
+        <div id="currentIntentDiv"><br></div>br
+        <div id="tableTitle" ><b>Existing Intents:</b><br></div>
+        <div id="existingIntentsDiv" onscroll="existingIntentsDivScroll()">
             <table id="existingIntentsTable" class="existingIntents-table">
                 <tr>
                     <td>empty...</td>
@@ -180,7 +210,7 @@ Your message was submitted successfully. Thank you.
     </form>
 </div>
 <script>
-const radiobuttons = document.getElementsByName('slots_choices');
+const slotBtns = document.getElementsByName('slots_choices');
 const intent_label_choices = document.getElementById('id_intent_label_choices');
 const radioButtonContainer = document.getElementById("radioButtonContainer");
 const form = document.getElementById("submit_intent_form");
@@ -191,9 +221,44 @@ const currentIntentDiv = document.getElementById("currentIntentDiv");
 const existingIntentsTable = document.getElementById("existingIntentsTable");
 const intents_json = JSON.parse("{{form.intents_json|escapejs}}");
 const existing_intents_json = JSON.parse("{{form.existing_intents_json|escapejs}}");
+const existingIntentsDiv = document.getElementById('existingIntentsDiv');
 
 intent_label_choices.value = localStorage['id_intent_label_choices'];
 displayExistingIntentsColored();
+existingIntentsDiv.scrollTop = localStorage['existingIntentsDiv'];
+existingIntentsDiv.style.top = /*window.scrollY +*/ document.querySelector('#tableTitle').getBoundingClientRect().bottom;
+
+function existingIntentsDivScroll(){
+    localStorage['existingIntentsDiv'] = existingIntentsDiv.scrollTop;
+}
+
+function getContrastYIQ(hexcolor){
+    hexcolor = hexcolor.replace("#", "");
+    var r = parseInt(hexcolor.substr(0,2),16);
+    var g = parseInt(hexcolor.substr(2,2),16);
+    var b = parseInt(hexcolor.substr(4,2),16);
+    var yiq = ((r*299)+(g*587)+(b*114))/1000;
+    // 128
+    return (yiq >= 60) ? 'black' : 'white';
+}
+function rgb2hex(rgb) {
+    rgb_ = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+    if (!rgb_ || rgb_.length<3)
+        return rgb
+    else
+        rgb=rgb_
+    function hex(x) {
+        return ("0" + parseInt(x).toString(16)).slice(-2);
+    }
+    return "#" + hex(rgb[1]) + hex(rgb[2]) + hex(rgb[3]);
+}
+function adjustTextColor(obj){
+    const hex_color = rgb2hex(obj.style["background-color"]);
+    obj.style.color = getContrastYIQ(hex_color);
+}
+slotBtns.forEach(function(btn) {
+    adjustTextColor(btn);
+});
 
 class FormAppearance {
   constructor() {
@@ -226,7 +291,7 @@ class FormAppearance {
 }
 const formAppearance = new FormAppearance();
 
-radiobuttons.forEach(radiobutton => {
+slotBtns.forEach(radiobutton => {
     radiobutton.addEventListener('mousedown', e => {
         event.preventDefault();
     });
@@ -276,6 +341,7 @@ function appendColoredTextToDiv(div, wordsArray, masksArray, slot_colors, clear=
                 color = "#AAAAAA";
             if (masksArray[i] !== "O"){
                 newSpan.style = "background-color:"+color;
+                adjustTextColor(newSpan);
                 if (masksArray[i].includes("I-"))
                     blankSpan.style = "background-color:"+color;
             }
@@ -311,7 +377,6 @@ function displayExistingIntentsColored(){
         cell1.appendChild(deleteButton);
         
         appendColoredTextToDiv(cell0, seq_in.split(' '), seq_out.split(' '), slot_colors);
-        // existingIntentsDiv.appendChild(document.createElement("br"));
     }
 
 }
