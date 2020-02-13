@@ -1,9 +1,29 @@
 {% extends "base.html" %}
 {% block content %}
+<style>
+    .styled-text {
+    padding-left: 5px;
+    padding-right: 5px;
+    text-indent: 50px;
+    text-align: justify;
+    letter-spacing: 3px;
+    }
+
+    .colored-text {
+    text-decoration: none;
+    color: rgb(92, 34, 8);
+    font-weight: bold;
+    }
+</style>
+
 <form id="edit_intent_form" action="" method="post" novalidate>
     {% csrf_token %}
     <div id="inlineSection" class="inline-submit-section" style="background-color:rgba(11, 29, 12, 0.178)">
-        <input id="export_dataset" name="export_dataset" type="submit" value="export_dataset" class="submit-button">
+        <div><span class="colored-text">Dataset location:</span> {{dataset_dir}}</div> 
+        <input name="export_dataset" type="submit" value="export_dataset" class="submit-button"></br>
+        <input name="import_dataset" type="submit" value="import_dataset" class="submit-button"></br>
+        <input name="create_dataset_split" type="submit" value="create_dataset_split_70%-15%-15%" class="submit-button"></br>
+        <input name="create_dataset_split" type="submit" value="create_dataset_split_80%-20%" class="submit-button"></br>
     </div>
 </form>
 

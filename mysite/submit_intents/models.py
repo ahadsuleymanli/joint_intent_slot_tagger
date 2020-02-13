@@ -4,7 +4,19 @@ class IntentInstance(models.Model):
     label = models.CharField(max_length=50)
     seq_in = models.CharField(max_length=255,default='')
     seq_out = models.CharField(max_length=255,default='')
-
+    def save(self, *args, **kwargs):
+        '''
+            creates label in IntentCategory table if it does not exist
+        '''
+        if len(self.seq_in.split()) != len(self.seq_out.split()):
+            print("wrong intent format", self.seq_in)
+            return
+        slot_list = self.seq_out.replace('B-','').replace('I-','').split()
+        obj, created = IntentCategory.objects.get_or_create(intent_label=self.label)
+        for slot in slot_list:
+            if slot!="O":
+                IntentSlot.objects.get_or_create(intent=obj, slot_name=slot)
+        super().save(*args, **kwargs)
 
 class IntentCategory(models.Model):
     intent_label = models.CharField(max_length=50)

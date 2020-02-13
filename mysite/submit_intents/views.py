@@ -10,7 +10,7 @@ from django.utils import timezone
 from django import forms
 from .models import *
 from .forms import *
-from .create_dataset import CreateDataset
+from .create_dataset import CreateDataset, DATASET_DIR
 
 
 def add_intent_to_db(label, seq_in, seq_out, id=None):
@@ -95,6 +95,13 @@ def export_dataset(request):
     if request.method == 'POST':
         if "export_dataset" in request.POST: 
             CreateDataset.create_dataset()
+        elif "import_dataset" in request.POST:
+            CreateDataset.import_dataset()
+        elif "create_dataset_split" in request.POST:
+            if request.POST["create_dataset_split"] == "create_dataset_split_70%-15%-15%":
+                CreateDataset.create_dataset_split([0.7,0.15,0.15])
+            elif request.POST["create_dataset_split"] == "create_dataset_split_80%-20%":
+                CreateDataset.create_dataset_split([0.8,0.2])
         return HttpResponseRedirect('/index/export_dataset')
 
-    return render(request, 'submit_intents/export_dataset.html')
+    return render(request, 'submit_intents/export_dataset.html',{"dataset_dir":DATASET_DIR})

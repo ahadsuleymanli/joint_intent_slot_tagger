@@ -74,10 +74,14 @@ WSGI_APPLICATION = 'mysite.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
+if os.path.isfile(os.path.join(BASE_DIR, 'override_db.sqlite3')):
+    dbpath = os.path.join(BASE_DIR, 'override_db.sqlite3')
+else:
+    dbpath = os.path.join(BASE_DIR, 'db.sqlite3')
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'NAME': dbpath,
     }
 }
 
