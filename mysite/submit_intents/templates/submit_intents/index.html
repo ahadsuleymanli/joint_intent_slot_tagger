@@ -237,7 +237,7 @@ radiobuttons.forEach(radiobutton => {
     else
         radiobutton.addEventListener('click', function() {
                 updateMask("",true);
-            }); 
+            });
 });
 radioButtonContainer.addEventListener('mousedown', e => {
     var targetElement = event.target || event.srcElement;
@@ -328,6 +328,22 @@ function displayCurrentIntentColored(){
         formAppearance.disallowSubmit();
 }
 
+//if user trys to input B-differentslot I-slot, fix it
+function fixBrokenSlots(){
+    maskArray = seq_out_field.value.split(' ');
+    if (maskArray.length && maskArray[0].startsWith("I-"))
+        maskArray[0].replace("I-","B-");
+    for (var i=1 ;i<maskArray.length; i++){
+        console.log(maskArray[i]);
+        if (maskArray[i].startsWith("I-") && maskArray[i-1]!=maskArray[i].replace("I-","B-") && maskArray[i-1]!=maskArray[i]){
+            
+            maskArray[i] = maskArray[i].replace("I-","B-");
+        }
+    }
+    seq_out_field.value = maskArray.join(' ');
+
+}
+
 function updateMask(slot, clear=false){
     const text = seq_in_field.value.replace(/\s\s+/g, ' ').trim();
     const selectionStart = seq_in_field.selectionStart;
@@ -368,6 +384,7 @@ function updateMask(slot, clear=false){
         }
     }
     seq_out_field.value = maskArray.join(' ');
+    fixBrokenSlots();
     displayCurrentIntentColored();
 }
 
