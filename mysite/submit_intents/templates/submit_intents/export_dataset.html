@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<body>
 <style>
     .styled-text {
     padding-left: 5px;
@@ -16,15 +17,32 @@
     }
 </style>
 
-<form id="edit_intent_form" action="" method="post" novalidate>
+<form id="export_dataset" action="" method="post" novalidate>
     {% csrf_token %}
     <div id="inlineSection" class="inline-submit-section" style="background-color:rgba(11, 29, 12, 0.178)">
-        <div><span class="colored-text">Dataset location:</span> {{dataset_dir}}</div> 
+        <div><span class="colored-text">Dataset location:</span> {{dataset_dir}}</div><br>
+        <div>Interleave categories: <input type="checkbox" name="interleave_categories" value="interleave_categories" checked><br></div>
+        <div>Shuffle intents: <input type="checkbox" name="shuffle_intents" value="shuffle_intents" checked><br></div>
         <input name="export_dataset" type="submit" value="export_dataset" class="submit-button"></br>
         <input name="import_dataset" type="submit" value="import_dataset" class="submit-button"></br>
         <input name="create_dataset_split" type="submit" value="create_dataset_split_70%-15%-15%" class="submit-button"></br>
         <input name="create_dataset_split" type="submit" value="create_dataset_split_80%-20%" class="submit-button"></br>
+        <input name="clear_dataset" type="submit" value="clear_dataset" class="submit-button"></br>
+        <input name="clear_categories" type="submit" value="clear_categories" class="submit-button"></br>
     </div>
-</form>
+</form> 
 
+<script>
+var checkBoxes = [document.getElementsByName("interleave_categories")[0],document.getElementsByName("shuffle_intents")[0]]
+
+checkBoxes.forEach(checkBox => {
+    if (localStorage[checkBox.name]!=undefined)
+        checkBox.checked = localStorage[checkBox.name]==="true";
+    checkBox.addEventListener('click', function() {
+        localStorage[checkBox.name] = checkBox.checked;
+    }); 
+});
+
+</script>
+</body>
 {% endblock content %}

@@ -24,6 +24,7 @@ class IntentCategory(models.Model):
         constraints = [
             models.UniqueConstraint(fields= ['intent_label'], name="unique constraint"),
             ]
+        ordering = ('intent_label',)
     def save(self, *args, **kwargs):
         '''
             ensures the unique key
@@ -37,6 +38,7 @@ class IntentSlot(models.Model):
     color_hex = models.CharField(max_length=9 , default='#4b4b4b')
     class Meta:
         unique_together = (('intent', 'slot_name'),)
+        ordering = ('slot_name',)
     # def __str__(self):
     #     return (self.slot_name)
     

@@ -92,16 +92,28 @@ def view(request):
 
 
 def export_dataset(request):
+    interleave_categories = False
+    shuffle = False
     if request.method == 'POST':
+        if 'interleave_categories' in request.POST:
+            interleave_categories = request.POST['interleave_categories']=='interleave_categories'
+        if 'shuffle_intents' in request.POST:
+            shuffle = request.POST['shuffle_intents']=='shuffle_intents'
         if "export_dataset" in request.POST: 
-            CreateDataset.create_dataset()
+            CreateDataset.create_single_file_dataset(interleave_categories,shuffle)
         elif "import_dataset" in request.POST:
             CreateDataset.import_dataset()
         elif "create_dataset_split" in request.POST:
             if request.POST["create_dataset_split"] == "create_dataset_split_70%-15%-15%":
-                CreateDataset.create_dataset_split([0.7,0.15,0.15])
+                CreateDataset.create_dataset_split([0.7,0.15,0.15],interleave_categories,shuffle)
             elif request.POST["create_dataset_split"] == "create_dataset_split_80%-20%":
-                CreateDataset.create_dataset_split([0.8,0.2])
+                CreateDataset.create_dataset_split([0.8,0.2],interleave_categories,shuffle)
+        elif "clear_dataset" in request.POST:
+            IntentInstance.objects.all().delete()
+        elif "clear_categories" in request.POST:
+            IntentSlot.objects.all().delete()
+            IntentCategory.objects.all().delete()
+
         return HttpResponseRedirect('/index/export_dataset')
 
     return render(request, 'submit_intents/export_dataset.html',{"dataset_dir":DATASET_DIR})

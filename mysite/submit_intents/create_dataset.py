@@ -33,7 +33,22 @@ class CreateDataset:
             intents_dict[key].append(value)
     
     @staticmethod
-    def create_dataset(intents_dict=None,dataset_dir=DATASET_DIR):
+    def create_single_file_dataset(interleave_categories=True,shuffle=True):
+        '''
+            creates a single intents_dict and calls create_dataset
+        '''
+        intents_dict = {}
+        # getting all submitted intents from DB
+        intents = IntentInstance.objects.all()
+        if shuffle:
+            intents = intents.order_by('?')
+        # creating a dictionary of intents labels mapped to an array of (seq_in, seq_out) tuples  
+        for intent in intents:
+            CreateDataset.add_to_intents_dict(intents_dict,intent.label, (intent.seq_in,intent.seq_out))
+        CreateDataset.create_dataset(intents_dict,DATASET_DIR,interleave_categories,shuffle)
+
+    @staticmethod
+    def create_dataset(intents_dict,dataset_dir,interleave_categories,shuffle):
         '''
             outputs the dataset in the form of label, seq.in, seq.out text files
             each file contains one line per entry in dataset
@@ -42,21 +57,20 @@ class CreateDataset:
         label_file = open(label_path,"w+")
         seq_in_file = open(seq_in_path,"w+")
         seq_out_file = open(seq_out_path,"w+")
-        print(label_path)
-        if intents_dict is None:
-            intents_dict = {}
-            # getting all submitted intents from DB in random order
-            intents = IntentInstance.objects.order_by('?')
-            
-            # creating a dictionary of intents labels mapped to an array of (seq_in, seq_out) tuples  
-            for intent in intents:
-                CreateDataset.add_to_intents_dict(intents_dict,intent.label, (intent.seq_in,intent.seq_out))
 
-        # iterating over the dictionry Breadth-First 
-        # in order to output one of each intent category alternatingly into the output files
-        while not all(len(intents_dict[key])==0 for key in intents_dict):
+        if interleave_categories:
+            # iterating over the dictionry Breadth-Wise 
+            # in order to output one of each intent category alternatingly into the output files
+            while not all(len(intents_dict[key])==0 for key in intents_dict):
+                for key in intents_dict:
+                    if len(intents_dict[key]):
+                        seq_in, seq_out = intents_dict[key].pop(0)
+                        label_file.write(key+'\n')
+                        seq_in_file.write(seq_in+'\n')
+                        seq_out_file.write(seq_out+'\n')
+        else:
             for key in intents_dict:
-                if len(intents_dict[key]):
+                while len(intents_dict[key]):
                     seq_in, seq_out = intents_dict[key].pop(0)
                     label_file.write(key+'\n')
                     seq_in_file.write(seq_in+'\n')
@@ -67,7 +81,7 @@ class CreateDataset:
         seq_out_file.close()
 
     @staticmethod
-    def create_dataset_split(split_ratios):
+    def create_dataset_split(split_ratios,interleave_categories=True,shuffle=True):
         split_dicts = [{},{},{}]
         if sum(split_ratios) != 1.0 or len(split_ratios)>3:
             print("wrong split")
@@ -81,6 +95,8 @@ class CreateDataset:
                 splitting each intent category individually
             '''
             intents_by_label = IntentInstance.objects.filter(label=intent_label)
+            if shuffle:
+                intents_by_label=intents_by_label.order_by('?')
             intents_list_len = len(intents_by_label)
             slice_start_fraction = 0
             for i, ratio in enumerate(split_ratios):
@@ -98,8 +114,7 @@ class CreateDataset:
         # going over our dictionaries containing our dataset splits
         # calling create_dataset and passing our split dictionaries to it
         for split_dict,split_dir in zip(split_dicts,SPLIT_DIRS):
-            CreateDataset.create_dataset(intents_dict=split_dict,dataset_dir=split_dir)
-        print(split_dicts[0])
+            CreateDataset.create_dataset(split_dict,split_dir,interleave_categories,shuffle)
 
     @staticmethod
     def import_dataset():
