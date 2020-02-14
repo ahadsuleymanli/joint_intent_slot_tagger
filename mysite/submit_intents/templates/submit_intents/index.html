@@ -353,10 +353,12 @@ function appendColoredTextToDiv(div, wordsArray, masksArray, slot_colors, clear=
 // existing_intents_json
 
 function displayExistingIntentsColored(){
+    const intents_count = existing_intents_json.length;
     var intent_name;
     var slot_colors;
+    document.getElementById("tableTitle").innerHTML="<b>Existing Intents ("+intents_count+"):</b>";
     existingIntentsTable.innerHTML = ""
-    for (var i=0;i<existing_intents_json.length;i++){
+    for (var i=0;i<intents_count;i++){
         // console.log(existing_intents_json[i])
         const seq_in = existing_intents_json[i]["seq_in"];
         const seq_out = existing_intents_json[i]["seq_out"];
