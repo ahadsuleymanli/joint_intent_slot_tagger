@@ -1,9 +1,10 @@
 # A self contained web service for Goo format data labelling.<br/>
 The format is specified in the paper `Slot-Gated Modeling for Joint Slot Filling and Intent Prediction (Goo et al)`.<br/>
+Format uses tags in the form of `B-[slot] I-[slot] O`. Dataset is saved into `label`, `seq.in` and `seq.out` files.<br/>
 #### Features:
 - Add new intent labels and slots on the fly!
 - Add, delete, edit intents.
-- Exporting dataset in form of seq.in, seq.out, label text files.
+- Export, import and split datasets.
 #### Demo:
 ![](https://media.giphy.com/media/kH6OHJa0fa6JnneFKy/giphy.gif)
 #### What you need:</br>

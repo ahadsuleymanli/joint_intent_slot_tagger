@@ -49,11 +49,10 @@ class SubmitIntentsForm(forms.ModelForm):
     class Meta:
         model = IntentCategory
         fields = "__all__"
-    seq_in_field_widget = forms.Textarea(attrs={'autocomplete':'off','class':'intent-sentence','placeholder':'enter intent here',"onChange":"updateMask()"})
+    seq_in_field_widget = forms.TextInput(attrs={'autocomplete':'off','class':'intent-sentence','placeholder':'enter intent here',"onChange":"updateMask()"})
     seq_in_field = forms.CharField(label='', widget=seq_in_field_widget)
-    seq_out_field_widget = forms.TextInput(attrs={"readonly":"", 'autocomplete':'off','class':'intent-sentence','placeholder':'mask will be generated here'})
+    seq_out_field_widget = forms.TextInput(attrs={'style':"font-size: 12px;", "readonly":"", 'autocomplete':'off','class':'intent-sentence','placeholder':'mask will be generated here'})
     seq_out_field = forms.CharField(label='', widget=seq_out_field_widget)
-    existing_intent_widget = forms.Textarea(attrs={"readonly":"","disabled":"",'class':'intent-sentence'})
     intent_id_to_delete = forms.CharField(widget = forms.HiddenInput(), required = False)
     intent_id_to_modify = forms.CharField(widget = forms.HiddenInput(), required = False)
 
@@ -77,6 +76,4 @@ class SubmitIntentsForm(forms.ModelForm):
         existing_intens = IntentInstance.objects.all().filter(label=self.instance.intent_label).values('id','label','seq_in','seq_out')
         existing_intens = [intent for intent in existing_intens]
         self.existing_intents_json = json.dumps(existing_intens)
-
-        # self.fields["existing_intent"] = forms.CharField(label='', widget=self.existing_intent_widget,initial=existing_intens)
 
