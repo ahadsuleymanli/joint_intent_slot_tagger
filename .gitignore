@@ -3,3 +3,4 @@ old_*
 override_*
 dataset
 dataset_import
+mysite/nlp/trmodel

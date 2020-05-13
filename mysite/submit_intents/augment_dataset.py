@@ -13,7 +13,7 @@
 '''
 from .models import IntentInstance
 import os
-import math
+import math, random
 def get_dir(path,dir_name):
     path_to_dir = os.path.join(path, dir_name)
     if not os.path.exists(path_to_dir):
@@ -21,9 +21,8 @@ def get_dir(path,dir_name):
     return path_to_dir
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-DATASET_DIR = get_dir(ROOT_DIR, 'dataset')
-IMPORT_DIR = get_dir(ROOT_DIR, 'dataset_import')
-SPLIT_DIRS = [get_dir(DATASET_DIR, x) for x in ["train","valid","test"] ]
+NLP_DIR =  os.path.join(ROOT_DIR, "nlp")
+
 
 class AugmentDataset:
     @staticmethod
@@ -38,7 +37,7 @@ class AugmentDataset:
             intents_dict[key].append(value)
     @classmethod
     def do_augmentation(cls):
-        # TODO: clear augmented data first
+        from copy import deepcopy
         IntentInstance.objects.filter(is_augmentation=True).delete()
         intents_dict = {}
         augmented_dict = {}
@@ -53,30 +52,100 @@ class AugmentDataset:
             for intent in intents_by_label:
                 cls.add_to_dict(intents_dict, intent_label, (intent.seq_in,intent.seq_out))
 
-        cls.cross_category_noise(intents_dict,augmented_dict, 2, 1/2)
-        # print(augmented_dict)
+        # Augmentation steps here:
+        cls.shuffle(intents_dict, augmented_dict, 1)
+        cls.lemmatize(intents_dict, augmented_dict)
+        augmented_dict_1 = deepcopy(augmented_dict)
+        cls.cross_category_noise(augmented_dict_1, augmented_dict, 1, 1/2)
+        cls.cross_category_noise(intents_dict, augmented_dict, 2, 1/2)
+        cls.shuffle(intents_dict, augmented_dict, 1)
+
         for key in augmented_dict:
+            '''
+                adding the intents into the db with a is_augmentation flag
+            '''
             for intent in augmented_dict[key]:
                 seq_in = intent[0]
                 seq_out = intent[1]
                 if not IntentInstance.objects.filter(seq_in=seq_in, seq_out=seq_out):
                     IntentInstance.objects.create(label=key, seq_in=seq_in, seq_out=seq_out,is_augmentation=True)
-    @staticmethod
-    def clear_augmented_entries():
-        IntentInstance.objects.filter(is_augmentation=True).delete()
 
 
-    @staticmethod
-    def permutate(intents_dict,augmented_dict):
-        pass
+    @classmethod
+    def permutate(cls,intents_dict, augmented_dict):
+        pass 
+
+    @classmethod
+    def synonym_replacement(cls,intents_dict, augmented_dict, p, n):
+        '''
+            p chance to replace each word
+            n is number of times to work on a sentence
+        '''
+        # TODO try to use different replacement synonyms on each intent throughout a category
+        from gensim.models import KeyedVectors
+        word_vectors = KeyedVectors.load_word2vec_format(os.path.join(NLP_DIR,"trmodel"), binary=True)
+        ret = []
+        vec = word_vectors.most_similar(positive=["geliyor","gitmek"],negative=["gelmek"])
+        for (word,score) in vec:
+            pass
+        print(vec)
+    
+
+    @classmethod
+    def shuffle(cls, intents_dict, augmented_dict, n):
+        for category_id, key in enumerate(list(intents_dict)):
+            for (seq_in, seq_out) in intents_dict[key]:
+                for i in range(n):
+                    seq_in, seq_out = cls.extract_slots(seq_in, seq_out)
+                    len_seq = len(seq_in)
+                    idx1 = random.randint(0, len_seq-1)
+                    idx2 = idx1
+                    if len_seq < 2:
+                        break
+                    while idx2 == idx1:
+                        idx2 = random.randint(0, len_seq-1)
+                    temp = [seq_in[idx1],seq_out[idx1]]
+                    seq_in[idx1]=seq_in[idx2]
+                    seq_out[idx1]=seq_out[idx2]
+                    seq_in[idx2]=temp[0]
+                    seq_out[idx2]=temp[1]
+                    seq_in = " ".join(seq_in)
+                    seq_out = " ".join(seq_out)
+                    cls.add_to_dict(augmented_dict, key, (seq_in,seq_out))
+
+    @classmethod
+    def lemmatize(cls, intents_dict, augmented_dict):
+        '''
+            lemmatizes each word in the sentence
+        '''
+        from .nlp.lemmatizer_tr import get_phrase_root
+        for category_id, key in enumerate(list(intents_dict)):
+            for intent in intents_dict[key]:
+                seq_in, seq_out = intent
+                seq_in = seq_in.split()
+                for i in range(len(seq_in)):
+                    seq_in[i] = get_phrase_root(seq_in[i])
+                seq_in = " ".join(seq_in)
+                cls.add_to_dict(augmented_dict, key, (seq_in,seq_out))
 
     @staticmethod
-    def check_duplicates(intents_dict,augmented_dict):
-        pass
+    def extract_slots(seq_in,seq_out):
+        '''
+            groups words into tokens a list of tokens 
+        '''
+        seq_in = seq_in.split()
+        seq_out = seq_out.split()
+        seq_in_arr = [seq_in[0]]
+        seq_out_arr = [seq_out[0]]
+        for word, token in zip(seq_in[1:],seq_out[1:]):
+            if token.startswith("I-") and (seq_out_arr[-1].startswith("B-") or seq_out_arr[-1].startswith("I-")):
+                seq_in_arr[-1] += " " + word
+                seq_out_arr[-1] += " " + token
+            else:
+                seq_in_arr.append(word)
+                seq_out_arr.append(token)
+        return seq_in_arr, seq_out_arr
 
-    @staticmethod
-    def noise_addition(intents_dict,augmented_dict):
-        pass
     @classmethod
     def cross_category_noise(cls,intents_dict,augmented_dict, n, fraction):
         '''
@@ -121,13 +190,19 @@ class AugmentDataset:
             return seq_in_arr
         while True:
             '''
-                get a tail of intent
+                get the tail of an intent
             '''
             seq_in_arr = get_next_intent()
             yield " ".join(seq_in_arr[floor(len(seq_in_arr)*fraction):])
             '''
-                get a head of intent
+                get the head of an intent
             '''
             seq_in_arr = get_next_intent()
             yield " ".join(seq_in_arr[:ceil(len(seq_in_arr)*fraction)])
 
+    @staticmethod
+    def clear_augmented_entries():
+        IntentInstance.objects.filter(is_augmentation=True).delete()
+
+if __name__ == "__main__":
+    AugmentDataset.synonym_replacement(None,None,1,1)

@@ -9,6 +9,7 @@ verify_ssl = true
 django = "*"
 coverage = "*"
 pylint-django = "*"
+gensim = "*"
 
 [requires]
 python_version = "*"
