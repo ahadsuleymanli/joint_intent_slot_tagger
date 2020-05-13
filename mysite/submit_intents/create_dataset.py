@@ -135,4 +135,3 @@ class CreateDataset:
                     IntentInstance.objects.create(label=label.strip(), seq_in=seq_in.strip(), seq_out=seq_out.strip())
 
 
-            

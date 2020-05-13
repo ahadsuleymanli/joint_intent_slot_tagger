@@ -321,7 +321,7 @@ function removeIntent(id){
 
 }
 
-function appendColoredTextToDiv(div, wordsArray, masksArray, slot_colors, clear=false){
+function appendColoredTextToDiv(div, wordsArray, masksArray, slot_colors, clear=false, is_augmentation=false){
     if (clear)
         div.innerHTML = ""
     if (wordsArray.length === masksArray.length){
@@ -342,6 +342,8 @@ function appendColoredTextToDiv(div, wordsArray, masksArray, slot_colors, clear=
                     blankSpan.style = "background-color:"+color;
             }
             div.appendChild(blankSpan);
+            if (is_augmentation)
+                newSpan.style.color = '#0000A0';
             div.appendChild(newSpan);
         }
     }
@@ -360,6 +362,7 @@ function displayExistingIntentsColored(){
         const seq_out = existing_intents_json[i]["seq_out"];
         intent_name = existing_intents_json[i]["label"];
         slot_colors = intents_json[intent_name];
+        const is_augmentation = existing_intents_json[i]["is_augmentation"];
         var row = existingIntentsTable.insertRow(-1);
         var cell0 = row.insertCell(0);
         var cell1 = row.insertCell(1);
@@ -374,7 +377,7 @@ function displayExistingIntentsColored(){
         deleteButton.className="delete-button";
         cell1.appendChild(deleteButton);
         
-        appendColoredTextToDiv(cell0, seq_in.split(' '), seq_out.split(' '), slot_colors);
+        appendColoredTextToDiv(cell0, seq_in.split(' '), seq_out.split(' '), slot_colors, false, is_augmentation);
     }
 
 }

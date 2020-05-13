@@ -4,6 +4,7 @@ class IntentInstance(models.Model):
     label = models.CharField(max_length=50)
     seq_in = models.CharField(max_length=255,default='')
     seq_out = models.CharField(max_length=255,default='')
+    is_augmentation = models.BooleanField(default=False)
     def save(self, *args, **kwargs):
         '''
             creates label in IntentCategory table if it does not exist
