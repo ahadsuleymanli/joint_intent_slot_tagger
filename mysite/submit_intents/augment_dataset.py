@@ -14,6 +14,7 @@
 from .models import IntentInstance
 import os
 import math, random
+from threading import Lock
 def get_dir(path,dir_name):
     path_to_dir = os.path.join(path, dir_name)
     if not os.path.exists(path_to_dir):
@@ -25,6 +26,8 @@ NLP_DIR =  os.path.join(ROOT_DIR, "nlp")
 
 
 class AugmentDataset:
+    synonym_cache = {}
+
     @staticmethod
     def add_to_dict(intents_dict,key,value):
         '''
@@ -53,11 +56,28 @@ class AugmentDataset:
                 cls.add_to_dict(intents_dict, intent_label, (intent.seq_in,intent.seq_out))
 
         # Augmentation steps here:
+        # 1. Add shuffled copies
         cls.shuffle(intents_dict, augmented_dict, 1)
+        shuffle_dict = deepcopy(augmented_dict)
+
+        # 2. Add synonym replaced copies of the original and shuffled entries
+        cls.synonym_replacement(intents_dict, augmented_dict,similarity=65)
+        cls.synonym_replacement(shuffle_dict, augmented_dict,similarity=70)
+
+        # 3. Add lemmatized copies
         cls.lemmatize(intents_dict, augmented_dict)
+
+        # 4. Remove duplicates from the augmented list so far
+        cls.remove_duplicates(augmented_dict)
+
+        # 5. Add noise added copies of the augmented dataset
         augmented_dict_1 = deepcopy(augmented_dict)
         cls.cross_category_noise(augmented_dict_1, augmented_dict, 1, 1/2)
+
+        # 6. Add noise added copies of the original dataset
         cls.cross_category_noise(intents_dict, augmented_dict, 2, 1/2)
+
+        # 7. Add one more copy of the original dataset
         cls.shuffle(intents_dict, augmented_dict, 1)
 
         for key in augmented_dict:
@@ -76,19 +96,76 @@ class AugmentDataset:
         pass 
 
     @classmethod
-    def synonym_replacement(cls,intents_dict, augmented_dict, p, n):
+    def remove_duplicates(cls, augmented_dict):
+        for category_id, key in enumerate(list(augmented_dict)):
+            indexes_to_pop = set()
+            for i, (seq_in_i, seq_out_i) in enumerate(augmented_dict[key]):
+                for j, (seq_in_j, seq_out_j) in enumerate(augmented_dict[key][i:]):
+                    if i!=j and seq_in_i==seq_in_j:
+                        indexes_to_pop.add(j)
+            indexes_to_pop = sorted(indexes_to_pop, reverse=True)
+            for i in indexes_to_pop:
+                augmented_dict[key].pop(i) 
+
+    @classmethod
+    def get_synonym_cached(cls,key,word_vectors):
+        if key in cls.synonym_cache:
+            return cls.synonym_cache[key]
+        else:
+            try:
+                vec = word_vectors.most_similar(positive=[key],negative=[])
+            except:
+                vec = None
+            cls.synonym_cache[key] = vec
+            return vec
+
+    @classmethod
+    def synonym_replacement(cls,intents_dict, augmented_dict, p=1/5, n=1, similarity=70):
         '''
             p chance to replace each word
             n is number of times to work on a sentence
         '''
         # TODO try to use different replacement synonyms on each intent throughout a category
         from gensim.models import KeyedVectors
+        from .nlp.lemmatizer_tr import get_phrase_root
         word_vectors = KeyedVectors.load_word2vec_format(os.path.join(NLP_DIR,"trmodel"), binary=True)
-        ret = []
-        vec = word_vectors.most_similar(positive=["geliyor","gitmek"],negative=["gelmek"])
-        for (word,score) in vec:
-            pass
-        print(vec)
+        cache = {}
+        def get_synonym(word,words_already_used):
+            vec = cls.get_synonym_cached(word,word_vectors)
+            if vec is None:
+                return None
+            for i,(word,score) in enumerate(vec):
+                if score < similarity:
+                    vec = vec[:i]
+                    break
+            for word,score in vec:
+                if word not in words_already_used:
+                    words_already_used.append(word)
+                    return word
+            return None
+        for category_id, key in enumerate(list(intents_dict)):
+            words_already_used = []
+            for i in range(n):
+                '''
+                    do this n times
+                '''
+                for intent in intents_dict[key]:
+                    seq_in, seq_out = intent
+                    seq_in = seq_in.split()
+                    for i in range(len(seq_in)):
+                        rand = random.randint(0,10)/10
+                        if rand<p:
+                            '''
+                                with p chance replace the word with its synonym or root's synonym
+                            '''
+                            synonym = get_synonym(seq_in[i],words_already_used)
+                            if synonym:
+                                seq_in[i] = synonym
+                            else:
+                                root = get_phrase_root(seq_in[i])
+                                seq_in[i] = get_synonym(root,words_already_used) or seq_in[i]
+                    seq_in = " ".join(seq_in)
+                    cls.add_to_dict(augmented_dict, key, (seq_in,seq_out))
     
 
     @classmethod
@@ -152,6 +229,7 @@ class AugmentDataset:
             n times per intent
             fraction of unrelated intent to add to the start and the tail of the intent
         '''
+        chance_to_omit = 1/5
         class Counter:
             def __init__(self):
                 self.counters = []
@@ -161,12 +239,19 @@ class AugmentDataset:
             generator = cls.intent_head_tail_generator(counter_obj, intents_dict, category_id,fraction)
             for (seq_in, seq_out) in intents_dict[key]:
                 for i in range(n):
-                    start = next(generator)
-                    trail = next(generator)
-                    start_seq_out = " ".join(["O"]*len(start.split()))
-                    trail_seq_out = " ".join(["O"]*len(trail.split()))
-                    augmented_seq_in = start + " " + seq_in + " " + trail
-                    augmented_seq_out = start_seq_out + " " + seq_out + " " + trail_seq_out
+                    start = next(generator) + " "
+                    trail = " " + next(generator)
+                    start_seq_out = " ".join(["O"]*len(start.split())) + " "
+                    trail_seq_out = " " + " ".join(["O"]*len(trail.split()))
+                    rand = random.randint(0,10)/10
+                    if rand<chance_to_omit:
+                        start = ""
+                        start_seq_out = ""
+                    elif rand<chance_to_omit*2:
+                        trail = ""
+                        trail_seq_out = ""
+                    augmented_seq_in = start + seq_in + trail
+                    augmented_seq_out = start_seq_out + seq_out + trail_seq_out
                     cls.add_to_dict(augmented_dict, key, (augmented_seq_in,augmented_seq_out))
         
     @staticmethod
