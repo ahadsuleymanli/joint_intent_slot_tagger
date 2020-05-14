@@ -113,6 +113,8 @@ def export_dataset(request):
                 CreateDataset.create_dataset_split([0.7,0.15,0.15],interleave_categories,shuffle)
             elif request.POST["create_dataset_split"] == "create_dataset_split_80%-20%":
                 CreateDataset.create_dataset_split([0.8,0.2],interleave_categories,shuffle)
+            elif request.POST["create_dataset_split"] == "create_dataset_split_70%-30%":
+                CreateDataset.create_dataset_split([0.7,0.3],interleave_categories,shuffle)
         elif "clear_dataset" in request.POST:
             IntentInstance.objects.all().delete()
         elif "clear_categories" in request.POST:

@@ -58,11 +58,11 @@ class AugmentDataset:
         # Augmentation steps here:
         # 1. Add shuffled copies
         cls.shuffle(intents_dict, augmented_dict, 1)
-        shuffle_dict = deepcopy(augmented_dict)
+        # shuffle_dict = deepcopy(augmented_dict)
 
         # 2. Add synonym replaced copies of the original and shuffled entries
-        cls.synonym_replacement(intents_dict, augmented_dict,similarity=65)
-        cls.synonym_replacement(shuffle_dict, augmented_dict,similarity=70)
+        cls.synonym_replacement(intents_dict, augmented_dict, p=1/5, n=1, similarity=65)
+        # cls.synonym_replacement(shuffle_dict, augmented_dict,similarity=75)
 
         # 3. Add lemmatized copies
         cls.lemmatize(intents_dict, augmented_dict)
@@ -229,7 +229,7 @@ class AugmentDataset:
             n times per intent
             fraction of unrelated intent to add to the start and the tail of the intent
         '''
-        chance_to_omit = 1/5
+        chance_to_omit = 1/8
         class Counter:
             def __init__(self):
                 self.counters = []
