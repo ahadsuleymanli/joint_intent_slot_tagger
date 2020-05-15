@@ -52,28 +52,26 @@
         transform: translateY(1px);
     }
     .delete-button {
+        position: static;
         background-color: #8e0000;
-        text-align: center;
-        border: none;
-        border-radius: 4px;
-        outline: none;
-        display: inline-block;
-        right: 5;
-        width: 80px;
-        color: #fff;
-        padding: 7px;
-        font-style: italic;
-        cursor: pointer;
-
-        box-shadow: 0 3px #999;
+        margin:unset;
     }
     .delete-button:hover {
         background-color: #8e3e59;
     }
     .delete-button:active {
         background-color: #6e3e56;
-        box-shadow: 0 2px #666;
-        transform: translateY(1px);
+    }
+    .settings-button {
+        position: static;
+        background-color: #6e6e6e;
+        margin:unset;
+    }
+    .settings-button:hover {
+        background-color: #3a3a3a;
+    }
+    .settings-button:active {
+        background-color: #756d71;
     }
     .existingIntents-table {
         font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
@@ -158,18 +156,32 @@ Your message was submitted successfully. Thank you.
             <div id="radioButtonContainer">
                 {{form.intent_label_choices}}
                 <!-- {{form.intent_label_choices.errors}} -->
-                <div class="grid-container">
+            <table style="width:100%"><tr>
+                <td><div class="grid-container">
                 {% for slot_choice,slot_name in form.slots_choices.field.choices %}
-
                     <input class="slotBtn" type="button" name="slots_choices" style= "background-color: {{ slot_choice.color_hex }}" value={{ slot_choice.slot_name }}>
-
-
                 {% endfor %}
-
-
-                  <input class="slotBtn" type="button" id="clearSlots" name="slots_choices" style= "background-color: #C0C0C0" value="clear slot"> <br>
-
-                </div>
+                <input class="slotBtn" type="button" id="clearSlots" name="slots_choices" style= "background-color: #C0C0C0" value="clear slot"> <br>
+                </div></td>
+                <td id="settings_column" style="vertical-align:top;">
+                    <table style="float:right;background-color: rgb(235, 235, 235);">
+                        <tr><td>
+                            <p>Excempt following slots from augmentation steps:</p>
+                            <label>Stemmify:</label>
+                            {{form.excempt_stemmify}}<p>
+                            <label>Synonyms:</label>
+                            {{form.excempt_synonym}}<p>
+                            <label>No shuffle list:</label>
+                            {{form.excempt_shuffle}}<p>
+                            </td>
+                        </tr>
+                        <tr><td>
+                            <br>
+                            <input name="settings_submit" value="Update" type="submit" class="submit-button settings-button" >
+                        </td></tr>
+                    </table>
+                </td> 
+            </tr></table>
             </div>
             <span id="inputStatusText" class="styled-text"></span>
             <br>
@@ -210,6 +222,8 @@ const slotBtns = document.getElementsByName('slots_choices');
 const intent_label_choices = document.getElementById('id_intent_label_choices');
 const radioButtonContainer = document.getElementById("radioButtonContainer");
 const form = document.getElementById("submit_intent_form");
+const settings_column = document.getElementById('settings_column');
+
  
 const seq_in_field = document.getElementById("id_seq_in_field");
 const seq_out_field = document.getElementById("id_seq_out_field");
@@ -302,9 +316,7 @@ slotBtns.forEach(radiobutton => {
 });
 radioButtonContainer.addEventListener('mousedown', e => {
     var targetElement = event.target || event.srcElement;
-    if (targetElement == intent_label_choices){
-    }
-    else
+    if (targetElement != intent_label_choices && !settings_column.contains(targetElement))
         event.preventDefault();
 });
 
@@ -318,10 +330,9 @@ function removeIntent(id){
         document.getElementById("id_intent_id_to_delete").value = id;
         form.submit();
     }
-
 }
 
-function appendColoredTextToDiv(div, wordsArray, masksArray, slot_colors, clear=false, is_augmentation=false){
+function appendColoredTextToDiv(div, wordsArray, masksArray, slot_colors, clear=false, is_synthetic=false){
     if (clear)
         div.innerHTML = ""
     if (wordsArray.length === masksArray.length){
@@ -342,7 +353,7 @@ function appendColoredTextToDiv(div, wordsArray, masksArray, slot_colors, clear=
                     blankSpan.style = "background-color:"+color;
             }
             div.appendChild(blankSpan);
-            if (is_augmentation)
+            if (is_synthetic)
                 newSpan.style.color = '#0000A0';
             div.appendChild(newSpan);
         }
@@ -362,7 +373,7 @@ function displayExistingIntentsColored(){
         const seq_out = existing_intents_json[i]["seq_out"];
         intent_name = existing_intents_json[i]["label"];
         slot_colors = intents_json[intent_name];
-        const is_augmentation = existing_intents_json[i]["is_augmentation"];
+        const is_synthetic = existing_intents_json[i]["is_synthetic"];
         var row = existingIntentsTable.insertRow(-1);
         var cell0 = row.insertCell(0);
         var cell1 = row.insertCell(1);
@@ -374,10 +385,10 @@ function displayExistingIntentsColored(){
         deleteButton.addEventListener('click', function() {removeIntent(intentId);}, false);
         
         deleteButton.innerHTML = "delete";
-        deleteButton.className="delete-button";
+        deleteButton.className="submit-button delete-button";
         cell1.appendChild(deleteButton);
         
-        appendColoredTextToDiv(cell0, seq_in.split(' '), seq_out.split(' '), slot_colors, false, is_augmentation);
+        appendColoredTextToDiv(cell0, seq_in.split(' '), seq_out.split(' '), slot_colors, false, is_synthetic);
     }
 
 }

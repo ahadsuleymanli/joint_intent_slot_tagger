@@ -56,6 +56,13 @@ class SubmitIntentsForm(forms.ModelForm):
     intent_id_to_delete = forms.CharField(widget = forms.HiddenInput(), required = False)
     intent_id_to_modify = forms.CharField(widget = forms.HiddenInput(), required = False)
 
+    simpletextfield = forms.TextInput(attrs={'autocomplete':'off', 'size':'40'})
+    excempt_stemmify = forms.CharField(label='', widget=simpletextfield)
+    excempt_synonym = forms.CharField(label='', widget=simpletextfield)
+    excempt_shuffle = forms.CharField(label='', widget=simpletextfield)
+    settings_submit = forms.CharField()
+
+
     INTENT_LABELS = []
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -73,7 +80,7 @@ class SubmitIntentsForm(forms.ModelForm):
         self.intents_json = json.dumps(INTENT_SLOTS_DICT)
         self.fields["intent_label_choices"] = forms.ChoiceField(choices=self.INTENT_LABELS,widget=forms.Select(attrs={'onChange':'updateForm()'}))
         self.fields["slots_choices"] = forms.ModelChoiceField(queryset=self.instance.intentslot_set.values('slot_name','color_hex'),empty_label=None, widget=forms.RadioSelect(attrs={}))
-        existing_intens = IntentInstance.objects.all().filter(label=self.instance.intent_label).values('id','label','seq_in','seq_out','is_augmentation')
+        existing_intens = IntentInstance.objects.all().filter(label=self.instance.intent_label).values('id','label','seq_in','seq_out','is_synthetic')
         existing_intens = [intent for intent in existing_intens]
         self.existing_intents_json = json.dumps(existing_intens)
 

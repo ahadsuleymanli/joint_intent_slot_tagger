@@ -14,6 +14,14 @@ from .create_dataset import CreateDataset, DATASET_DIR
 from .augment_dataset import AugmentDataset
 
 
+def update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,excempt_shuffle):
+    # IntentSlot.objects.create(intent=intent,slot_name=word)
+    # TODO: get intent slot pairs
+    # list1 = IntentSlot.objects.filter(intent_label=intent_name).values()
+    # list1 = IntentInstance.intentslot_set.all().values('slot_name')
+    # print(list1)
+    pass
+
 def add_intent_to_db(label, seq_in, seq_out, id=None):
     seq_in = seq_in.strip().lower().split()
     seq_out = seq_out.strip().split()
@@ -41,6 +49,10 @@ def index(request):
         form = SubmitIntentsForm(request.POST)
         valid = form.is_valid()
         cd = form.cleaned_data
+        def get_if_exists(key):
+            if key in cd:
+                return cd[key]
+            return ""
         print(cd)
         if "intent_label_choices" in cd:
             intent_label = cd["intent_label_choices"]
@@ -49,6 +61,12 @@ def index(request):
                 add_intent_to_db(cd["intent_label_choices"],cd["seq_in_field"],cd["seq_out_field"],cd["intent_id_to_modify"])
             else:
                 add_intent_to_db(cd["intent_label_choices"],cd["seq_in_field"],cd["seq_out_field"])
+        elif all(x in cd for x in ["settings_submit","intent_label_choices"]):
+            excempt_stemmify = get_if_exists("excempt_stemmify").split()
+            excempt_synonym = get_if_exists("excempt_synonym").split()
+            excempt_shuffle = get_if_exists("excempt_shuffle").split()
+            intent_name = cd["intent_label_choices"]
+            update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,excempt_shuffle)
         elif "intent_id_to_delete" in cd:
             delete_intent_from_db(cd["intent_id_to_delete"])
 

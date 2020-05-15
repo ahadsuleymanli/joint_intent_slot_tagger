@@ -4,7 +4,7 @@ class IntentInstance(models.Model):
     label = models.CharField(max_length=50)
     seq_in = models.CharField(max_length=255,default='')
     seq_out = models.CharField(max_length=255,default='')
-    is_augmentation = models.BooleanField(default=False)
+    is_synthetic = models.BooleanField(default=False)
     def save(self, *args, **kwargs):
         '''
             creates label in IntentCategory table if it does not exist
@@ -37,6 +37,9 @@ class IntentSlot(models.Model):
     intent = models.ForeignKey(IntentCategory, on_delete=models.CASCADE)
     slot_name = models.CharField(max_length=50)
     color_hex = models.CharField(max_length=9 , default='#4b4b4b')
+    excempt_stemmify = models.BooleanField(default=False)
+    excempt_synonym = models.BooleanField(default=False)
+    excempt_shuffle = models.BooleanField(default=False)
     class Meta:
         unique_together = (('intent', 'slot_name'),)
         ordering = ('slot_name',)

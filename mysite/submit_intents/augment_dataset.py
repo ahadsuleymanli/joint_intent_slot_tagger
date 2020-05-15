@@ -41,7 +41,7 @@ class AugmentDataset:
     @classmethod
     def do_augmentation(cls):
         from copy import deepcopy
-        IntentInstance.objects.filter(is_augmentation=True).delete()
+        IntentInstance.objects.filter(is_synthetic=True).delete()
         intents_dict = {}
         augmented_dict = {}
         unique_labels = IntentInstance.objects.values_list("label",flat=True).distinct()
@@ -82,13 +82,13 @@ class AugmentDataset:
 
         for key in augmented_dict:
             '''
-                adding the intents into the db with a is_augmentation flag
+                adding the intents into the db with a is_synthetic flag
             '''
             for intent in augmented_dict[key]:
                 seq_in = intent[0]
                 seq_out = intent[1]
                 if not IntentInstance.objects.filter(seq_in=seq_in, seq_out=seq_out):
-                    IntentInstance.objects.create(label=key, seq_in=seq_in, seq_out=seq_out,is_augmentation=True)
+                    IntentInstance.objects.create(label=key, seq_in=seq_in, seq_out=seq_out,is_synthetic=True)
 
 
     @classmethod
@@ -287,7 +287,7 @@ class AugmentDataset:
 
     @staticmethod
     def clear_augmented_entries():
-        IntentInstance.objects.filter(is_augmentation=True).delete()
+        IntentInstance.objects.filter(is_synthetic=True).delete()
 
 if __name__ == "__main__":
     AugmentDataset.synonym_replacement(None,None,1,1)
