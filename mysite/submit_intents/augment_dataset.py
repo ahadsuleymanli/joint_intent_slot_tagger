@@ -11,10 +11,11 @@
     -Cross category noise addition (CCNA): Start and trail intents with parts from unrelated intents.  n-times per intent.
     -Noise Addition (NA): Insert random non-related words as noise.
 '''
-from .models import IntentInstance
+from .models import IntentInstance, IntentCategory
 import os
 import math, random
 from threading import Lock
+from copy import deepcopy
 def get_dir(path,dir_name):
     path_to_dir = os.path.join(path, dir_name)
     if not os.path.exists(path_to_dir):
@@ -38,22 +39,66 @@ class AugmentDataset:
             intents_dict[key] = [value,]
         else:
             intents_dict[key].append(value)
+
+    @classmethod
+    def get_augmentation_settings(cls):
+        augmentation_settings = {}
+        intent_objects = IntentCategory.objects.all()
+        for i in range(len(intent_objects)):
+            slots = intent_objects[i].intentslot_set
+            def get_slot_list(querylist):
+                return [x["slot_name"] for x in querylist]
+            excempt_stemmify_list = get_slot_list(slots.filter(excempt_stemmify=True).values('slot_name'))
+            excempt_synonym_list = get_slot_list(slots.filter(excempt_synonym=True).values('slot_name'))
+            excempt_shuffle_list = get_slot_list(slots.filter(excempt_shuffle=True).values('slot_name'))
+
+            augmentation_settings[intent_objects[i].intent_label] = {"excempt_stemmify_tokens": excempt_stemmify_list,
+                                                                "excempt_synonym_tokens": excempt_synonym_list,
+                                                                "excempt_shuffle_tokens": excempt_shuffle_list}
+        return augmentation_settings
+
+
     @classmethod
     def do_augmentation(cls):
+        # TODO: implement augmentation excemptions
         from copy import deepcopy
         IntentInstance.objects.filter(is_synthetic=True).delete()
+        intents_dict = {}
         intents_dict = {}
         augmented_dict = {}
         unique_labels = IntentInstance.objects.values_list("label",flat=True).distinct()
         unique_labels = [x for x in unique_labels]
         
+        # Get lates augmentation settings:
+        augmentation_settings = cls.get_augmentation_settings()
+
+        # Create intents_dict
         for intent_label in unique_labels:
             '''
                 creating a dict of intent categories mapped to an array of intents 
             '''
             intents_by_label = IntentInstance.objects.filter(label=intent_label)
             for intent in intents_by_label:
-                cls.add_to_dict(intents_dict, intent_label, (intent.seq_in,intent.seq_out))
+                # create ignore lists that represent the status of the tokens in seq_in and seq_out
+                stemmify_ignorelist = [] 
+                synonym_ignorelist = []
+                shuffle_ignorelist = []
+                excempt_stemmify_tokens = augmentation_settings[intent.label]["excempt_stemmify_tokens"]
+                excempt_synonym_tokens = augmentation_settings[intent.label]["excempt_synonym_tokens"]
+                excempt_shuffle_tokens = augmentation_settings[intent.label]["excempt_shuffle_tokens"]
+                # creating ignore lists
+                slots = intent.seq_out.replace("B-","").replace("I-","").split()
+                for slot in slots:
+                    stemmify_ignorelist.append(slot in excempt_stemmify_tokens)
+                    synonym_ignorelist.append(slot in excempt_synonym_tokens)
+                    shuffle_ignorelist.append(slot in excempt_shuffle_tokens)
+
+                # Verifying list lengths
+                lengths = map(len,[stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist,intent.seq_in.split(),intent.seq_out.split()])
+                if not len(set(lengths))==1:
+                    raise Exception("All lists are not the same length!")
+
+                cls.add_to_dict(intents_dict, intent_label, (intent.seq_in,intent.seq_out,stemmify_ignorelist,synonym_ignorelist, shuffle_ignorelist))
 
         # Augmentation steps here:
         # 1. Add shuffled copies
@@ -64,8 +109,8 @@ class AugmentDataset:
         cls.synonym_replacement(intents_dict, augmented_dict, p=1/5, n=1, similarity=65)
         # cls.synonym_replacement(shuffle_dict, augmented_dict,similarity=75)
 
-        # 3. Add lemmatized copies
-        cls.lemmatize(intents_dict, augmented_dict)
+        # 3. Add stemmified copies
+        cls.stemmify(intents_dict, augmented_dict)
 
         # 4. Remove duplicates from the augmented list so far
         cls.remove_duplicates(augmented_dict)
@@ -99,8 +144,8 @@ class AugmentDataset:
     def remove_duplicates(cls, augmented_dict):
         for category_id, key in enumerate(list(augmented_dict)):
             indexes_to_pop = set()
-            for i, (seq_in_i, seq_out_i) in enumerate(augmented_dict[key]):
-                for j, (seq_in_j, seq_out_j) in enumerate(augmented_dict[key][i:]):
+            for i, (seq_in_i, seq_out_i,*_) in enumerate(augmented_dict[key]):
+                for j, (seq_in_j,seq_out_j,*_) in enumerate(augmented_dict[key][i:]):
                     if i!=j and seq_in_i==seq_in_j:
                         indexes_to_pop.add(j)
             indexes_to_pop = sorted(indexes_to_pop, reverse=True)
@@ -130,19 +175,34 @@ class AugmentDataset:
         from .nlp.lemmatizer_tr import get_phrase_root
         word_vectors = KeyedVectors.load_word2vec_format(os.path.join(NLP_DIR,"trmodel"), binary=True)
         cache = {}
-        def get_synonym(word,words_already_used):
-            vec = cls.get_synonym_cached(word,word_vectors)
-            if vec is None:
+
+        def get_synonym(word,words_already_used,similarity, dont_stemmify=False):
+            '''
+                returns the synonym
+                if can't the synonym of the root, and if still cant returns None
+            '''
+            def get_synonym_(word,words_already_used,similarity):
+                vec = cls.get_synonym_cached(word,word_vectors)
+                if vec is None:
+                    return None
+                for i,(word,score) in enumerate(vec):
+                    if score < similarity:
+                        vec = vec[:i]
+                        break
+                for word,score in vec:
+                    if word not in words_already_used:
+                        words_already_used.append(word)
+                        return word
                 return None
-            for i,(word,score) in enumerate(vec):
-                if score < similarity:
-                    vec = vec[:i]
-                    break
-            for word,score in vec:
-                if word not in words_already_used:
-                    words_already_used.append(word)
-                    return word
-            return None
+
+            synonym = get_synonym_(word,words_already_used,similarity)
+            if synonym:
+                return synonym
+            elif not dont_stemmify:
+                return get_synonym_(get_phrase_root(word),words_already_used,similarity)
+            else:
+                return None
+
         for category_id, key in enumerate(list(intents_dict)):
             words_already_used = []
             for i in range(n):
@@ -150,28 +210,44 @@ class AugmentDataset:
                     do this n times
                 '''
                 for intent in intents_dict[key]:
-                    seq_in, seq_out = intent
+                    seq_in,seq_out,stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist = intent
+                    stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_ = cls.get_deepcopies(stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist)
                     seq_in = seq_in.split()
                     for i in range(len(seq_in)):
                         rand = random.randint(0,10)/10
                         if rand<p:
                             '''
                                 with p chance replace the word with its synonym or root's synonym
+                                if the word is in any ignorelist, act accordingly
                             '''
-                            synonym = get_synonym(seq_in[i],words_already_used)
-                            if synonym:
-                                seq_in[i] = synonym
-                            else:
-                                root = get_phrase_root(seq_in[i])
-                                seq_in[i] = get_synonym(root,words_already_used) or seq_in[i]
-                    seq_in = " ".join(seq_in)
-                    cls.add_to_dict(augmented_dict, key, (seq_in,seq_out))
-    
+                            dont_stemmify_ = False
+                            if synonym_ignorelist[i] is not True:
+                                similarity_ = 91
+                                dont_stemmify_ = True
+                            if stemmify_ignorelist[i] is not True:
+                                dont_stemmify_ = True
+                            seq_in[i] = get_synonym(seq_in[i],words_already_used,similarity_,dont_stemmify_) or seq_in[i]
 
+                    seq_in = " ".join(seq_in)
+                    cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_))
+    
+    @staticmethod
+    def get_deepcopies(_1,_2,_3):
+        return deepcopy(_1),deepcopy(_2),deepcopy(_3)
     @classmethod
     def shuffle(cls, intents_dict, augmented_dict, n):
+        def joint_swap(idx1, idx2, *args):
+            '''
+                swaps indexes jointly in a number of given lists
+            '''
+            for arg in args:
+                temp = arg[idx1]
+                arg[idx1]=arg[idx2]
+                arg[idx2]=temp
+
         for category_id, key in enumerate(list(intents_dict)):
-            for (seq_in, seq_out) in intents_dict[key]:
+            for (seq_in, seq_out,stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist) in intents_dict[key]:
+                stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_ = cls.get_deepcopies(stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist)
                 for i in range(n):
                     seq_in, seq_out = cls.extract_slots(seq_in, seq_out)
                     len_seq = len(seq_in)
@@ -181,29 +257,28 @@ class AugmentDataset:
                         break
                     while idx2 == idx1:
                         idx2 = random.randint(0, len_seq-1)
-                    temp = [seq_in[idx1],seq_out[idx1]]
-                    seq_in[idx1]=seq_in[idx2]
-                    seq_out[idx1]=seq_out[idx2]
-                    seq_in[idx2]=temp[0]
-                    seq_out[idx2]=temp[1]
-                    seq_in = " ".join(seq_in)
-                    seq_out = " ".join(seq_out)
-                    cls.add_to_dict(augmented_dict, key, (seq_in,seq_out))
+                    if shuffle_ignorelist[idx1] is not True and shuffle_ignorelist[idx2] is not True:
+                        joint_swap(idx1,idx2,seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_)
+                        seq_in = " ".join(seq_in)
+                        seq_out = " ".join(seq_out)
+                        cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_))
 
     @classmethod
-    def lemmatize(cls, intents_dict, augmented_dict):
+    def stemmify(cls, intents_dict, augmented_dict):
         '''
-            lemmatizes each word in the sentence
+            stemmifies each word in the sentence
         '''
         from .nlp.lemmatizer_tr import get_phrase_root
         for category_id, key in enumerate(list(intents_dict)):
             for intent in intents_dict[key]:
-                seq_in, seq_out = intent
+                seq_in,seq_out,stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist = intent
+                stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_ = cls.get_deepcopies(stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist)
                 seq_in = seq_in.split()
                 for i in range(len(seq_in)):
-                    seq_in[i] = get_phrase_root(seq_in[i])
+                    if stemmify_ignorelist[i] is not True:
+                        seq_in[i] = get_phrase_root(seq_in[i])
                 seq_in = " ".join(seq_in)
-                cls.add_to_dict(augmented_dict, key, (seq_in,seq_out))
+                cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_))
 
     @staticmethod
     def extract_slots(seq_in,seq_out):
@@ -237,22 +312,29 @@ class AugmentDataset:
         counter_obj = Counter()
         for category_id, key in enumerate(list(intents_dict)):
             generator = cls.intent_head_tail_generator(counter_obj, intents_dict, category_id,fraction)
-            for (seq_in, seq_out) in intents_dict[key]:
+            for (seq_in,seq_out,stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist) in intents_dict[key]:
+                stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_ = cls.get_deepcopies(stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist)
                 for i in range(n):
                     start = next(generator) + " "
                     trail = " " + next(generator)
                     start_seq_out = " ".join(["O"]*len(start.split())) + " "
                     trail_seq_out = " " + " ".join(["O"]*len(trail.split()))
+                    start_ignorelist = [False]*len(start.split())
+                    trail_ignorelist = [False]*len(trail.split())
                     rand = random.randint(0,10)/10
                     if rand<chance_to_omit:
                         start = ""
                         start_seq_out = ""
+                        start_ignorelist = []
                     elif rand<chance_to_omit*2:
                         trail = ""
                         trail_seq_out = ""
+                        trail_ignorelist = []
                     augmented_seq_in = start + seq_in + trail
                     augmented_seq_out = start_seq_out + seq_out + trail_seq_out
-                    cls.add_to_dict(augmented_dict, key, (augmented_seq_in,augmented_seq_out))
+                    for x in [stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_]:
+                        x = start_ignorelist + x + trail_ignorelist
+                    cls.add_to_dict(augmented_dict, key, (augmented_seq_in,augmented_seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_))
         
     @staticmethod
     def intent_head_tail_generator(counter_obj, intents_dict, current_id, fraction):

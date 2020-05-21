@@ -15,12 +15,21 @@ from .augment_dataset import AugmentDataset
 
 
 def update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,excempt_shuffle):
-    # IntentSlot.objects.create(intent=intent,slot_name=word)
-    # TODO: get intent slot pairs
-    # list1 = IntentSlot.objects.filter(intent_label=intent_name).values()
-    # list1 = IntentInstance.intentslot_set.all().values('slot_name')
-    # print(list1)
-    pass
+    '''
+        excempt_stemmify: list of slots to except from the stemmify step
+        excempt_synonym: list of slots to except from the synonym step
+        excempt_shuffle: list of slots to except from the shuffle step
+    '''
+    intent = IntentCategory.objects.filter(intent_label=intent_name).first()
+    intent.intentslot_set.filter(slot_name__in=excempt_stemmify).update(excempt_stemmify=True)
+    intent.intentslot_set.exclude(slot_name__in=excempt_stemmify).update(excempt_stemmify=False)
+
+    intent.intentslot_set.filter(slot_name__in=excempt_synonym).update(excempt_synonym=True)
+    intent.intentslot_set.exclude(slot_name__in=excempt_synonym).update(excempt_synonym=False)
+
+    intent.intentslot_set.filter(slot_name__in=excempt_shuffle).update(excempt_shuffle=True)
+    intent.intentslot_set.exclude(slot_name__in=excempt_shuffle).update(excempt_shuffle=False)
+
 
 def add_intent_to_db(label, seq_in, seq_out, id=None):
     seq_in = seq_in.strip().lower().split()

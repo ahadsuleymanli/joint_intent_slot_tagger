@@ -159,7 +159,8 @@ Your message was submitted successfully. Thank you.
             <table style="width:100%"><tr>
                 <td><div class="grid-container">
                 {% for slot_choice,slot_name in form.slots_choices.field.choices %}
-                    <input class="slotBtn" type="button" name="slots_choices" style= "background-color: {{ slot_choice.color_hex }}" value={{ slot_choice.slot_name }}>
+                <!-- 'excempt_stemmify','excempt_synonym','excempt_shuffle' -->
+                    <input class="slotBtn" type="button" name="slots_choices" style= "background-color: {{ slot_choice.color_hex }}" value={{ slot_choice.slot_name }}  >
                 {% endfor %}
                 <input class="slotBtn" type="button" id="clearSlots" name="slots_choices" style= "background-color: #C0C0C0" value="clear slot"> <br>
                 </div></td>

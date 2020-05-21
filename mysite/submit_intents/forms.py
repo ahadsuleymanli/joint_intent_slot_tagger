@@ -81,6 +81,16 @@ class SubmitIntentsForm(forms.ModelForm):
         self.fields["intent_label_choices"] = forms.ChoiceField(choices=self.INTENT_LABELS,widget=forms.Select(attrs={'onChange':'updateForm()'}))
         self.fields["slots_choices"] = forms.ModelChoiceField(queryset=self.instance.intentslot_set.values('slot_name','color_hex'),empty_label=None, widget=forms.RadioSelect(attrs={}))
         existing_intens = IntentInstance.objects.all().filter(label=self.instance.intent_label).values('id','label','seq_in','seq_out','is_synthetic')
-        existing_intens = [intent for intent in existing_intens]
+        existing_intens = [intent for intent in existing_intens]       
         self.existing_intents_json = json.dumps(existing_intens)
 
+        #
+        # displaying the Data Augmentation Settings 
+        excempt_stemmify_list = self.instance.intentslot_set.filter(excempt_stemmify=True).values('slot_name')
+        excempt_synonym_list = self.instance.intentslot_set.filter(excempt_synonym=True).values('slot_name')
+        excempt_shuffle_list = self.instance.intentslot_set.filter(excempt_shuffle=True).values('slot_name')
+        def serialize_slotlist(querylist):
+            return " ".join([x["slot_name"] for x in querylist])
+        self.fields["excempt_stemmify"].initial = serialize_slotlist(excempt_stemmify_list)
+        self.fields["excempt_synonym"].initial = serialize_slotlist(excempt_synonym_list)
+        self.fields["excempt_shuffle"].initial = serialize_slotlist(excempt_shuffle_list)
