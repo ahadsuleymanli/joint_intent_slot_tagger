@@ -60,7 +60,6 @@ class AugmentDataset:
 
     @classmethod
     def do_augmentation(cls):
-        # TODO: implement augmentation excemptions
         from copy import deepcopy
         IntentInstance.objects.filter(is_synthetic=True).delete()
         intents_dict = {}
@@ -86,6 +85,10 @@ class AugmentDataset:
                 excempt_stemmify_tokens = augmentation_settings[intent.label]["excempt_stemmify_tokens"]
                 excempt_synonym_tokens = augmentation_settings[intent.label]["excempt_synonym_tokens"]
                 excempt_shuffle_tokens = augmentation_settings[intent.label]["excempt_shuffle_tokens"]
+                excempt_stemmify_tokens = []
+                excempt_synonym_tokens = []
+                excempt_shuffle_tokens = []
+
                 # creating ignore lists
                 slots = intent.seq_out.replace("B-","").replace("I-","").split()
                 for slot in slots:
@@ -103,11 +106,13 @@ class AugmentDataset:
         # Augmentation steps here:
         # 1. Add shuffled copies
         cls.shuffle(intents_dict, augmented_dict, 1)
-        # shuffle_dict = deepcopy(augmented_dict)
-
+        shuffle_dict = deepcopy(augmented_dict)
+        synonym_replacement_p = 1/4
         # 2. Add synonym replaced copies of the original and shuffled entries
-        cls.synonym_replacement(intents_dict, augmented_dict, p=1/5, n=1, similarity=65)
-        # cls.synonym_replacement(shuffle_dict, augmented_dict,similarity=75)
+        cls.synonym_replacement(intents_dict, augmented_dict, p=1/5, n=1, similarity=0.75)
+        # cls.synonym_replacement(intents_dict, augmented_dict, p=1/8, n=1, similarity=0.65)
+        # cls.synonym_replacement(intents_dict, augmented_dict, p=1/10, n=1, similarity=0.55)
+        # cls.synonym_replacement(shuffle_dict, augmented_dict, p=1/10, n=1, similarity=0.85)
 
         # 3. Add stemmified copies
         cls.stemmify(intents_dict, augmented_dict)
@@ -122,7 +127,7 @@ class AugmentDataset:
         # 6. Add noise added copies of the original dataset
         cls.cross_category_noise(intents_dict, augmented_dict, 2, 1/2)
 
-        # 7. Add one more copy of the original dataset
+        # # 7. Add one more copy of the original dataset
         cls.shuffle(intents_dict, augmented_dict, 1)
 
         for key in augmented_dict:
@@ -165,7 +170,7 @@ class AugmentDataset:
             return vec
 
     @classmethod
-    def synonym_replacement(cls,intents_dict, augmented_dict, p=1/5, n=1, similarity=70):
+    def synonym_replacement(cls,intents_dict, augmented_dict, p=1/5, n=1, similarity=0.7):
         '''
             p chance to replace each word
             n is number of times to work on a sentence
@@ -221,16 +226,16 @@ class AugmentDataset:
                                 if the word is in any ignorelist, act accordingly
                             '''
                             dont_stemmify_ = False
-                            if synonym_ignorelist[i] is not True:
-                                similarity_ = 91
+                            similarity_ = similarity
+                            if synonym_ignorelist[i] is True:
+                                similarity_ = 0.95
                                 dont_stemmify_ = True
-                            if stemmify_ignorelist[i] is not True:
+                            if stemmify_ignorelist[i] is True:
                                 dont_stemmify_ = True
                             seq_in[i] = get_synonym(seq_in[i],words_already_used,similarity_,dont_stemmify_) or seq_in[i]
-
-                    seq_in = " ".join(seq_in)
-                    cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_))
-    
+                    if None not in seq_in:
+                        seq_in = " ".join(seq_in)
+                        cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_))
     @staticmethod
     def get_deepcopies(_1,_2,_3):
         return deepcopy(_1),deepcopy(_2),deepcopy(_3)
@@ -248,20 +253,33 @@ class AugmentDataset:
         for category_id, key in enumerate(list(intents_dict)):
             for (seq_in, seq_out,stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist) in intents_dict[key]:
                 stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_ = cls.get_deepcopies(stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist)
+                seq_in,seq_out,stemmify_ignorelist_slots,synonym_ignorelist_slots,shuffle_ignorelist_slots = cls.extract_slots(seq_in, seq_out, stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_)
+                len_seq = len(seq_in)
                 for i in range(n):
-                    seq_in, seq_out = cls.extract_slots(seq_in, seq_out)
-                    len_seq = len(seq_in)
-                    idx1 = random.randint(0, len_seq-1)
-                    idx2 = idx1
-                    if len_seq < 2:
+                    choicelist = list(range(0, len(seq_in)))
+
+                    # remove the excemptions from the random pool
+                    for ignore_idx, x in enumerate(shuffle_ignorelist_slots):
+                        if "True" in x:
+                            assert "False" not in x
+                            choicelist.remove(ignore_idx)
+
+                    if len(choicelist) < 2:
                         break
-                    while idx2 == idx1:
-                        idx2 = random.randint(0, len_seq-1)
-                    if shuffle_ignorelist[idx1] is not True and shuffle_ignorelist[idx2] is not True:
-                        joint_swap(idx1,idx2,seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_)
-                        seq_in = " ".join(seq_in)
-                        seq_out = " ".join(seq_out)
-                        cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_))
+                    idx1 = random.choice(choicelist)
+                    choicelist.remove(idx1)   
+                    idx2 = random.choice(choicelist)
+
+                    lists = stemmify_ignorelist_slots,synonym_ignorelist_slots,shuffle_ignorelist_slots
+                    for list_ in lists:
+                        str_ = " ".join(stemmify_ignorelist_slots).split()
+                        list_ = [True if x=="True" else False for x in str_]
+
+                    # if shuffle_ignorelist[idx1] is not True and shuffle_ignorelist[idx2] is not True:
+                    joint_swap(idx1,idx2,seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_)
+                    seq_in = " ".join(seq_in)
+                    seq_out = " ".join(seq_out)
+                    cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_))
 
     @classmethod
     def stemmify(cls, intents_dict, augmented_dict):
@@ -281,7 +299,7 @@ class AugmentDataset:
                 cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_))
 
     @staticmethod
-    def extract_slots(seq_in,seq_out):
+    def extract_slots(seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_):
         '''
             groups words into tokens a list of tokens 
         '''
@@ -289,14 +307,23 @@ class AugmentDataset:
         seq_out = seq_out.split()
         seq_in_arr = [seq_in[0]]
         seq_out_arr = [seq_out[0]]
-        for word, token in zip(seq_in[1:],seq_out[1:]):
+        stemmify_ignorelist_slots = [str(stemmify_ignorelist_[0])]
+        synonym_ignorelist_slots = [str(synonym_ignorelist_[0])]
+        shuffle_ignorelist_slots = [str(shuffle_ignorelist_[0])]
+        for word, token, x,y,z in zip(seq_in[1:],seq_out[1:],stemmify_ignorelist_[1:],synonym_ignorelist_[1:],shuffle_ignorelist_[1:]):
             if token.startswith("I-") and (seq_out_arr[-1].startswith("B-") or seq_out_arr[-1].startswith("I-")):
                 seq_in_arr[-1] += " " + word
                 seq_out_arr[-1] += " " + token
+                stemmify_ignorelist_slots[-1] += " " + str(x)
+                synonym_ignorelist_slots[-1] += " " + str(y)
+                shuffle_ignorelist_slots[-1] += " " + str(z)
             else:
                 seq_in_arr.append(word)
                 seq_out_arr.append(token)
-        return seq_in_arr, seq_out_arr
+                stemmify_ignorelist_slots.append(str(x))
+                synonym_ignorelist_slots.append(str(y))
+                shuffle_ignorelist_slots.append(str(z))
+        return seq_in_arr, seq_out_arr, stemmify_ignorelist_slots,synonym_ignorelist_slots,shuffle_ignorelist_slots
 
     @classmethod
     def cross_category_noise(cls,intents_dict,augmented_dict, n, fraction):
