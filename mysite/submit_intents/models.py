@@ -40,6 +40,7 @@ class IntentSlot(models.Model):
     excempt_stemmify = models.BooleanField(default=False)
     excempt_synonym = models.BooleanField(default=False)
     excempt_shuffle = models.BooleanField(default=False)
+    unique_values_only = models.BooleanField(default=False)
     class Meta:
         unique_together = (('intent', 'slot_name'),)
         ordering = ('slot_name',)

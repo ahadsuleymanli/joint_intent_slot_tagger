@@ -51,10 +51,12 @@ class AugmentDataset:
             excempt_stemmify_list = get_slot_list(slots.filter(excempt_stemmify=True).values('slot_name'))
             excempt_synonym_list = get_slot_list(slots.filter(excempt_synonym=True).values('slot_name'))
             excempt_shuffle_list = get_slot_list(slots.filter(excempt_shuffle=True).values('slot_name'))
+            unique_values_only_list = get_slot_list(slots.filter(unique_values_only=True).values('slot_name'))
 
             augmentation_settings[intent_objects[i].intent_label] = {"excempt_stemmify_tokens": excempt_stemmify_list,
                                                                 "excempt_synonym_tokens": excempt_synonym_list,
-                                                                "excempt_shuffle_tokens": excempt_shuffle_list}
+                                                                "excempt_shuffle_tokens": excempt_shuffle_list,
+                                                                "unique_values_only_tokens": unique_values_only_list}
         return augmentation_settings
 
 
@@ -82,12 +84,11 @@ class AugmentDataset:
                 stemmify_ignorelist = [] 
                 synonym_ignorelist = []
                 shuffle_ignorelist = []
+                unique_values_only_list = []
                 excempt_stemmify_tokens = augmentation_settings[intent.label]["excempt_stemmify_tokens"]
                 excempt_synonym_tokens = augmentation_settings[intent.label]["excempt_synonym_tokens"]
                 excempt_shuffle_tokens = augmentation_settings[intent.label]["excempt_shuffle_tokens"]
-                excempt_stemmify_tokens = []
-                excempt_synonym_tokens = []
-                excempt_shuffle_tokens = []
+                unique_values_only_tokens = augmentation_settings[intent.label]["unique_values_only_tokens"]
 
                 # creating ignore lists
                 slots = intent.seq_out.replace("B-","").replace("I-","").split()
@@ -95,40 +96,42 @@ class AugmentDataset:
                     stemmify_ignorelist.append(slot in excempt_stemmify_tokens)
                     synonym_ignorelist.append(slot in excempt_synonym_tokens)
                     shuffle_ignorelist.append(slot in excempt_shuffle_tokens)
+                    unique_values_only_list.append(slot in unique_values_only_tokens)
 
                 # Verifying list lengths
-                lengths = map(len,[stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist,intent.seq_in.split(),intent.seq_out.split()])
+                lengths = map(len,[stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist,unique_values_only_list,intent.seq_in.split(),intent.seq_out.split()])
                 if not len(set(lengths))==1:
                     raise Exception("All lists are not the same length!")
 
-                cls.add_to_dict(intents_dict, intent_label, (intent.seq_in,intent.seq_out,stemmify_ignorelist,synonym_ignorelist, shuffle_ignorelist))
+                cls.add_to_dict(intents_dict, intent_label, (intent.seq_in,intent.seq_out,(stemmify_ignorelist,synonym_ignorelist, shuffle_ignorelist,unique_values_only_list)))
 
         # Augmentation steps here:
         # 1. Add shuffled copies
         cls.shuffle(intents_dict, augmented_dict, 1)
-        shuffle_dict = deepcopy(augmented_dict)
-        synonym_replacement_p = 1/4
-        # 2. Add synonym replaced copies of the original and shuffled entries
-        cls.synonym_replacement(intents_dict, augmented_dict, p=1/5, n=1, similarity=0.75)
-        # cls.synonym_replacement(intents_dict, augmented_dict, p=1/8, n=1, similarity=0.65)
-        # cls.synonym_replacement(intents_dict, augmented_dict, p=1/10, n=1, similarity=0.55)
-        # cls.synonym_replacement(shuffle_dict, augmented_dict, p=1/10, n=1, similarity=0.85)
+        if True:
+            shuffle_dict = deepcopy(augmented_dict)
+            synonym_replacement_p = 1/4
+            # 2. Add synonym replaced copies of the original and shuffled entries
+            cls.synonym_replacement(intents_dict, augmented_dict, p=1/5, n=1, similarity=0.85)
+            # cls.synonym_replacement(intents_dict, augmented_dict, p=1/8, n=1, similarity=0.65)
+            # cls.synonym_replacement(intents_dict, augmented_dict, p=1/10, n=1, similarity=0.55)
+            # cls.synonym_replacement(shuffle_dict, augmented_dict, p=1/10, n=1, similarity=0.85)
 
-        # 3. Add stemmified copies
-        cls.stemmify(intents_dict, augmented_dict)
+            # 3. Add stemmified copies
+            cls.stemmify(intents_dict, augmented_dict)
 
-        # 4. Remove duplicates from the augmented list so far
-        cls.remove_duplicates(augmented_dict)
+            # 4. Remove duplicates from the augmented list so far
+            cls.remove_duplicates(augmented_dict)
 
-        # 5. Add noise added copies of the augmented dataset
-        augmented_dict_1 = deepcopy(augmented_dict)
-        cls.cross_category_noise(augmented_dict_1, augmented_dict, 1, 1/2)
+            # 5. Add noise added copies of the augmented dataset
+            augmented_dict_1 = deepcopy(augmented_dict)
+            cls.cross_category_noise(augmented_dict_1, augmented_dict, 1, 1/2)
 
-        # 6. Add noise added copies of the original dataset
-        cls.cross_category_noise(intents_dict, augmented_dict, 2, 1/2)
+            # 6. Add noise added copies of the original dataset
+            cls.cross_category_noise(intents_dict, augmented_dict, 2, 1/2)
 
-        # # 7. Add one more copy of the original dataset
-        cls.shuffle(intents_dict, augmented_dict, 1)
+            # # 7. Add one more copy of the original dataset
+            cls.shuffle(intents_dict, augmented_dict, 1)
 
         for key in augmented_dict:
             '''
@@ -214,9 +217,9 @@ class AugmentDataset:
                 '''
                     do this n times
                 '''
-                for intent in intents_dict[key]:
-                    seq_in,seq_out,stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist = intent
-                    stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_ = cls.get_deepcopies(stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist)
+                for seq_in,seq_out,augment_settings in intents_dict[key]:
+                    stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist,unique_values_only_list = augment_settings
+                    # stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_ = cls.get_deepcopies((stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist))
                     seq_in = seq_in.split()
                     for i in range(len(seq_in)):
                         rand = random.randint(0,10)/10
@@ -235,10 +238,10 @@ class AugmentDataset:
                             seq_in[i] = get_synonym(seq_in[i],words_already_used,similarity_,dont_stemmify_) or seq_in[i]
                     if None not in seq_in:
                         seq_in = " ".join(seq_in)
-                        cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_))
+                        cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,cls.get_deepcopies(augment_settings)))
     @staticmethod
-    def get_deepcopies(_1,_2,_3):
-        return deepcopy(_1),deepcopy(_2),deepcopy(_3)
+    def get_deepcopies(list_of_objects):
+        return [deepcopy(x) for x in list_of_objects]
     @classmethod
     def shuffle(cls, intents_dict, augmented_dict, n):
         def joint_swap(idx1, idx2, *args):
@@ -251,9 +254,11 @@ class AugmentDataset:
                 arg[idx2]=temp
 
         for category_id, key in enumerate(list(intents_dict)):
-            for (seq_in, seq_out,stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist) in intents_dict[key]:
-                stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_ = cls.get_deepcopies(stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist)
-                seq_in,seq_out,stemmify_ignorelist_slots,synonym_ignorelist_slots,shuffle_ignorelist_slots = cls.extract_slots(seq_in, seq_out, stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_)
+            for (seq_in, seq_out,augment_settings) in intents_dict[key]:
+                stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist,unique_values_only_list = augment_settings
+                stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_,unique_values_only_list_ = cls.get_deepcopies(augment_settings)
+
+                seq_in,seq_out,stemmify_ignorelist_slots,synonym_ignorelist_slots,shuffle_ignorelist_slots = cls.extract_slots(seq_in, seq_out, stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist)
                 len_seq = len(seq_in)
                 for i in range(n):
                     choicelist = list(range(0, len(seq_in)))
@@ -263,7 +268,6 @@ class AugmentDataset:
                         if "True" in x:
                             assert "False" not in x
                             choicelist.remove(ignore_idx)
-
                     if len(choicelist) < 2:
                         break
                     idx1 = random.choice(choicelist)
@@ -276,10 +280,10 @@ class AugmentDataset:
                         list_ = [True if x=="True" else False for x in str_]
 
                     # if shuffle_ignorelist[idx1] is not True and shuffle_ignorelist[idx2] is not True:
-                    joint_swap(idx1,idx2,seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_)
+                    joint_swap(idx1,idx2,seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_,unique_values_only_list_)
                     seq_in = " ".join(seq_in)
                     seq_out = " ".join(seq_out)
-                    cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_))
+                    cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,(stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_,unique_values_only_list_)))
 
     @classmethod
     def stemmify(cls, intents_dict, augmented_dict):
@@ -288,15 +292,15 @@ class AugmentDataset:
         '''
         from .nlp.lemmatizer_tr import get_phrase_root
         for category_id, key in enumerate(list(intents_dict)):
-            for intent in intents_dict[key]:
-                seq_in,seq_out,stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist = intent
-                stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_ = cls.get_deepcopies(stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist)
+            for seq_in,seq_out,augment_settings in intents_dict[key]:
+                
+                stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist,unique_values_only_list = augment_settings
                 seq_in = seq_in.split()
                 for i in range(len(seq_in)):
                     if stemmify_ignorelist[i] is not True:
                         seq_in[i] = get_phrase_root(seq_in[i])
                 seq_in = " ".join(seq_in)
-                cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_))
+                cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,cls.get_deepcopies(augment_settings)))
 
     @staticmethod
     def extract_slots(seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_):
@@ -339,8 +343,8 @@ class AugmentDataset:
         counter_obj = Counter()
         for category_id, key in enumerate(list(intents_dict)):
             generator = cls.intent_head_tail_generator(counter_obj, intents_dict, category_id,fraction)
-            for (seq_in,seq_out,stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist) in intents_dict[key]:
-                stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_ = cls.get_deepcopies(stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist)
+            for (seq_in,seq_out,augment_settings) in intents_dict[key]:
+                stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist,unique_values_only_list = augment_settings
                 for i in range(n):
                     start = next(generator) + " "
                     trail = " " + next(generator)
@@ -359,9 +363,9 @@ class AugmentDataset:
                         trail_ignorelist = []
                     augmented_seq_in = start + seq_in + trail
                     augmented_seq_out = start_seq_out + seq_out + trail_seq_out
-                    for x in [stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_]:
+                    for x in [stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist]:
                         x = start_ignorelist + x + trail_ignorelist
-                    cls.add_to_dict(augmented_dict, key, (augmented_seq_in,augmented_seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_))
+                    cls.add_to_dict(augmented_dict, key, (augmented_seq_in,augmented_seq_out,cls.get_deepcopies(augment_settings)))
         
     @staticmethod
     def intent_head_tail_generator(counter_obj, intents_dict, current_id, fraction):

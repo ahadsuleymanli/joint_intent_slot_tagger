@@ -14,7 +14,7 @@ from .create_dataset import CreateDataset, DATASET_DIR
 from .augment_dataset import AugmentDataset
 
 
-def update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,excempt_shuffle):
+def update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,excempt_shuffle,unique_values_only):
     '''
         excempt_stemmify: list of slots to except from the stemmify step
         excempt_synonym: list of slots to except from the synonym step
@@ -29,6 +29,9 @@ def update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,ex
 
     intent.intentslot_set.filter(slot_name__in=excempt_shuffle).update(excempt_shuffle=True)
     intent.intentslot_set.exclude(slot_name__in=excempt_shuffle).update(excempt_shuffle=False)
+
+    intent.intentslot_set.filter(slot_name__in=unique_values_only).update(unique_values_only=True)
+    intent.intentslot_set.exclude(slot_name__in=unique_values_only).update(unique_values_only=False)
 
 
 def add_intent_to_db(label, seq_in, seq_out, id=None):
@@ -74,8 +77,9 @@ def index(request):
             excempt_stemmify = get_if_exists("excempt_stemmify").split()
             excempt_synonym = get_if_exists("excempt_synonym").split()
             excempt_shuffle = get_if_exists("excempt_shuffle").split()
+            unique_values_only = get_if_exists("unique_values_only").split()
             intent_name = cd["intent_label_choices"]
-            update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,excempt_shuffle)
+            update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,excempt_shuffle,unique_values_only)
         elif "intent_id_to_delete" in cd:
             delete_intent_from_db(cd["intent_id_to_delete"])
 
