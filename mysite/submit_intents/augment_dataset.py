@@ -25,9 +25,33 @@ def get_dir(path,dir_name):
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 NLP_DIR =  os.path.join(ROOT_DIR, "nlp")
 
+class AugmentationSettings:
+    def __init__(self,settings):
+        self.settings = settings
+
+class Token:
+    def __init__(self,content,slot_name,augmentation_settings):
+        '''
+            seq_in and seq_out are parts of the actual seq_in and seq_out corresponding to the token
+        '''
+        self.content = slot_name
+
+class Intent:
+    def __init__(self,seq_in,seq_out,label,augmentation_settings):
+        pass
 
 class AugmentDataset:
     synonym_cache = {}
+
+    @classmethod
+    def handle_unique_requirement(cls,intents_list,value):
+        '''
+            before adding to intents_list, checks if the fields with unique requirement need to be "uniquefied" and does it
+        '''
+        seq_in,seq_out,augment_settings = value
+        stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist,unique_values_only_list = augment_settings
+        seq_in,seq_out,augment_settings_slots = cls.extract_slots(seq_in, seq_out, augment_settings)
+        _,_,_,unique_values_only_list_slots = augment_settings_slots
 
     @staticmethod
     def add_to_dict(intents_dict,key,value):
@@ -38,6 +62,7 @@ class AugmentDataset:
         if key not in intents_dict:
             intents_dict[key] = [value,]
         else:
+            AugmentDataset.handle_unique_requirement(intents_dict[key],value)
             intents_dict[key].append(value)
 
     @classmethod
@@ -258,7 +283,7 @@ class AugmentDataset:
                 stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist,unique_values_only_list = augment_settings
                 stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_,unique_values_only_list_ = cls.get_deepcopies(augment_settings)
 
-                seq_in,seq_out,stemmify_ignorelist_slots,synonym_ignorelist_slots,shuffle_ignorelist_slots = cls.extract_slots(seq_in, seq_out, stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist)
+                seq_in,seq_out,(stemmify_ignorelist_slots,synonym_ignorelist_slots,shuffle_ignorelist_slots,unique_values_only_list_slots) = cls.extract_slots(seq_in, seq_out, augment_settings)
                 len_seq = len(seq_in)
                 for i in range(n):
                     choicelist = list(range(0, len(seq_in)))
@@ -303,7 +328,7 @@ class AugmentDataset:
                 cls.add_to_dict(augmented_dict, key, (seq_in,seq_out,cls.get_deepcopies(augment_settings)))
 
     @staticmethod
-    def extract_slots(seq_in,seq_out,stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_):
+    def extract_slots(seq_in,seq_out,augment_settings):
         '''
             groups words into tokens a list of tokens 
         '''
@@ -311,23 +336,25 @@ class AugmentDataset:
         seq_out = seq_out.split()
         seq_in_arr = [seq_in[0]]
         seq_out_arr = [seq_out[0]]
-        stemmify_ignorelist_slots = [str(stemmify_ignorelist_[0])]
-        synonym_ignorelist_slots = [str(synonym_ignorelist_[0])]
-        shuffle_ignorelist_slots = [str(shuffle_ignorelist_[0])]
-        for word, token, x,y,z in zip(seq_in[1:],seq_out[1:],stemmify_ignorelist_[1:],synonym_ignorelist_[1:],shuffle_ignorelist_[1:]):
+        augment_settings_slots = lists = [[str(x[0])] for x in augment_settings]
+        # for lst in augment_settings_slots:
+
+        # stemmify_ignorelist_slots = [str(stemmify_ignorelist_[0])]
+        # synonym_ignorelist_slots = [str(synonym_ignorelist_[0])]
+        # shuffle_ignorelist_slots = [str(shuffle_ignorelist_[0])]
+        for i, (word, token) in enumerate(zip(seq_in[1:],seq_out[1:])):
             if token.startswith("I-") and (seq_out_arr[-1].startswith("B-") or seq_out_arr[-1].startswith("I-")):
                 seq_in_arr[-1] += " " + word
                 seq_out_arr[-1] += " " + token
-                stemmify_ignorelist_slots[-1] += " " + str(x)
-                synonym_ignorelist_slots[-1] += " " + str(y)
-                shuffle_ignorelist_slots[-1] += " " + str(z)
+                for setting_slots,setting in zip(augment_settings_slots,augment_settings):
+                    setting_slots[-1] += " " + str(setting[i+1])
             else:
                 seq_in_arr.append(word)
                 seq_out_arr.append(token)
-                stemmify_ignorelist_slots.append(str(x))
-                synonym_ignorelist_slots.append(str(y))
-                shuffle_ignorelist_slots.append(str(z))
-        return seq_in_arr, seq_out_arr, stemmify_ignorelist_slots,synonym_ignorelist_slots,shuffle_ignorelist_slots
+                for setting_slots,setting in zip(augment_settings_slots,augment_settings):
+                    setting_slots.append(str(setting[i+1]))
+
+        return seq_in_arr, seq_out_arr, augment_settings_slots
 
     @classmethod
     def cross_category_noise(cls,intents_dict,augmented_dict, n, fraction):

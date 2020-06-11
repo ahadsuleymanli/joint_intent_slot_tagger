@@ -11,6 +11,8 @@ django = "*"
 coverage = "*"
 pylint-django = "*"
 gensim = "*"
+numpy = "*"
+pandas = "*"
 
 [requires]
 python_version = "*"
