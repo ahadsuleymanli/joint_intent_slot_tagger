@@ -11,8 +11,8 @@ from django import forms
 from .models import *
 from .forms import *
 from .create_dataset import CreateDataset, DATASET_DIR
-from .augment_dataset import AugmentDataset
-
+# from .augment_dataset import AugmentDataset
+from .dataset_augmentation import AugmentDataset
 
 def update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,excempt_shuffle,unique_values_only):
     '''

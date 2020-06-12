@@ -11,22 +11,21 @@
     -Cross category noise addition (CCNA): Start and trail intents with parts from unrelated intents.  n-times per intent.
     -Noise Addition (NA): Insert random non-related words as noise.
 '''
-from .models import IntentInstance, IntentCategory
+from ..models import IntentInstance, IntentCategory
 import os
 import math, random
 from threading import Lock
 from copy import deepcopy
+from . import language
+from . import dataset
 
+dataset.tests()
 
 def get_dir(path,dir_name):
     path_to_dir = os.path.join(path, dir_name)
     if not os.path.exists(path_to_dir):
         os.makedirs(path_to_dir)
     return path_to_dir
-
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-NLP_DIR =  os.path.join(ROOT_DIR, "nlp")
-
 
 class AugmentDataset:
     synonym_cache = {}
@@ -94,7 +93,7 @@ class AugmentDataset:
             intents_by_label = IntentInstance.objects.filter(label=intent_label)
             for intent in intents_by_label:
                 # create ignore lists that represent the status of the tokens in seq_in and seq_out
-                stemmify_ignorelist = []
+                stemmify_ignorelist = [] 
                 synonym_ignorelist = []
                 shuffle_ignorelist = []
                 unique_values_only_list = []
@@ -192,9 +191,9 @@ class AugmentDataset:
             n is number of times to work on a sentence
         '''
         # TODO try to use different replacement synonyms on each intent throughout a category
-        from gensim.models import KeyedVectors
-        from .nlp.lemmatizer_tr import get_phrase_root
-        word_vectors = KeyedVectors.load_word2vec_format(os.path.join(NLP_DIR,"trmodel"), binary=True)
+        # from gensim.models import KeyedVectors
+        from .language.lemmatizer_tr import get_phrase_root
+        word_vectors = language.get_gensim_word_vectors()
         cache = {}
 
         def get_synonym(word,words_already_used,similarity, dont_stemmify=False):
@@ -303,10 +302,9 @@ class AugmentDataset:
         '''
             stemmifies each word in the sentence
         '''
-        from .nlp.lemmatizer_tr import get_phrase_root
+        from .language.lemmatizer_tr import get_phrase_root
         for category_id, key in enumerate(list(intents_dict)):
             for seq_in,seq_out,augment_settings in intents_dict[key]:
-                
                 stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist,unique_values_only_list = augment_settings
                 seq_in = seq_in.split()
                 for i in range(len(seq_in)):

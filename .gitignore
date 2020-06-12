@@ -3,5 +3,5 @@ old_*
 override_*
 dataset
 dataset_import
-mysite/submit_intents/nlp/trmodel
+mysite/submit_intents/dataset_augmentation/language/trmodel
 .vscode/
