@@ -1,6 +1,29 @@
 import numpy as np 
 import pandas as pd 
 from ..models import IntentInstance, IntentCategory
+from .language.lemmatizer_tr import get_phrase_root
+'''
+#### augmentation_setting dataframes are of the form:
+SendEmail                EXCEMPT_STEMM  EXCEMPT_SYNON EXCEMPT_SHUFF UNIQUE_VALUES
+SLOT                                                                   
+empty_message            NaN            NaN           NaN           NaN
+empty_subject            NaN            NaN           NaN           NaN
+message                  NaN            NaN          True          True
+message_end              NaN            NaN          True           NaN
+message_start            NaN            NaN          True           NaN
+name                     NaN            NaN           NaN           NaN
+send_email               NaN            NaN           NaN           NaN
+subject                  NaN            NaN          True          True
+subject_end              NaN            NaN          True           NaN
+subject_start            NaN            NaN          True           NaN
+
+#### intent dataframes are of the form:
+                            TOKEN           SLOT  EXCEMPT_STEMM  EXCEMPT_SYNON EXCEMPT_SHUFF UNIQUE_VALUES
+0                 mesaj içeriğini  message_start            NaN            NaN          True           NaN
+1  hadi gel köyümüze geri dönelim        message            NaN            NaN          True          True
+2                             yap     send_email            NaN            NaN           NaN           NaN 
+'''
+
 
 def goo_to_dataframe(seq_in,seq_out):
     seq_in_ = seq_in.split()
@@ -62,6 +85,57 @@ def get_augmentation_settings():
         augmentation_settings[intent_objects[i].intent_label] = df
     return augmentation_settings
 
+
+synonym_cache = {}
+
+def synonym_cacher(key,word_vectors):
+    '''
+        caching synonym generation
+    '''
+    global synonym_cache
+    if key in synonym_cache:
+        return synonym_cache[key]
+    else:
+        try:
+            vec = word_vectors.most_similar(positive=[key],negative=[])
+        except:
+            vec = None
+        synonym_cache[key] = vec
+        return vec
+
+def get_synonym(word,words_already_used,similarity,word_vectors,dont_stemmify=False):
+    '''
+        returns the synonym
+        if can't the synonym of the root, and if still cant returns None
+    '''
+    def get_synonym_helper(word,words_already_used,similarity):
+        vec = synonym_cacher(word,word_vectors)
+        if vec is None:
+            return None
+        for i,(word,score) in enumerate(vec):
+            if score < similarity:
+                vec = vec[:i]
+                break
+        for word,score in vec:
+            if word not in words_already_used:
+                words_already_used.append(word)
+                return word
+        return None
+
+    synonym = get_synonym_helper(word,words_already_used,similarity)
+    if synonym:
+        return synonym
+    elif not dont_stemmify:
+        return get_synonym_helper(get_phrase_root(word),words_already_used,similarity)
+    else:
+        return None
+
+def get_phrase_synonym(phrase,words_already_used,similarity,word_vectors,dont_stemmify=False):
+    phrase_synonym = []
+    for word in phrase.split():
+        synonym = get_synonym(phrase,words_already_used,similarity,word_vectors,dont_stemmify=False)
+        phrase_synonym.append(synonym)
+    return " ".join(phrase_synonym)
 
 # def group_words_into_slots(seq_in,seq_out):
 #     '''
