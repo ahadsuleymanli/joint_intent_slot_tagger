@@ -1,1 +1,1 @@
-from .augmentation import AugmentDataset
+from .augmentation import do_augmentation, clear_augmented_entries

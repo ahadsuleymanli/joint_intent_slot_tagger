@@ -56,6 +56,10 @@ class AugmentableDataset:
         self._intents_dict = {}
         self._augmentation_settings_dict = get_augmentation_settings()
 
+    @property
+    def intents_dict(self):
+        return self._intents_dict
+
     def __copy__(self):
         raise Exception('Should not be shallow copied')
 
@@ -81,7 +85,6 @@ class AugmentableDataset:
         '''
         unique_labels = IntentInstance.objects.values_list("label",flat=True).distinct()
         unique_labels = [x for x in unique_labels]
-        # unique_labels=["SendEmail"]
         for intent_label in unique_labels:
             '''
                 creating a dict of intent categories mapped to Intent objects
@@ -117,62 +120,33 @@ class AugmentableDataset:
         word_vectors = get_gensim_word_vectors()
         cache = {}
 
-        for key, intent_df in self._intents_dict.items():
+        for key, intents_list in self._intents_dict.items():
             words_already_used = []
             for i in range(n):
                 '''
                     do this operation n times, per specification
                 '''
-                intent_df = intent_df.copy(deep=True)
-                allowed_intents_df = intent_df[intent_df['EXCEMPT_SYNON'] != True]
-                unallowed_syonym_intents_df = intent_df[intent_df['EXCEMPT_SYNON'] == True]
-                print(allowed_intents_df)
-                print(unallowed_syonym_intents_df)
-                resultant_array = []
-                for i, row in allowed_intents_df:
-                    for i in range(len(seq_in)):
+                for intent_df in intents_list:
+                    
+                    intent_df = intent_df.copy(deep=True) #creating a deep copy that will be modified
+                    # allowed_intents_df = intent_df[intent_df['EXCEMPT_SYNON'] != True]
+                    # unallowed_syonym_intents_df = intent_df[intent_df['EXCEMPT_SYNON'] == True]
+                    for i, row in intent_df.iterrows():
                         rand = random.randint(0,10)/10
-                        if rand<p:
+                        if rand<p or True:
                             '''
                                 with p chance replace the word with its synonym or root's synonym
                                 if the word is in any ignorelist, act accordingly
                             '''
-                            dont_stemmify_ = False
-                            similarity_ = similarity
-                            if synonym_ignorelist[i] is True:
-                                similarity_ = 0.95
-                                dont_stemmify_ = True
-                            if stemmify_ignorelist[i] is True:
-                                dont_stemmify_ = True
-                            row.at[i,"TOKEN"] = get_phrase_synonym(row.TOKEN,words_already_used,similarity_,word_vectors,dont_stemmify = False)
-                    if None not in seq_in:
-                        seq_in = " ".join(seq_in)
+                            dont_stemmify_ = True if any([x is True for x in [intent_df.at[i,"EXCEMPT_STEMM"], intent_df.at[i,"EXCEMPT_SYNON"]]]) else False
+                            similarity_ = 0.95 if intent_df.at[i,"EXCEMPT_SYNON"] is True else similarity
+                            # print("here",intent_df.at[i,"EXCEMPT_SYNON"])
+                            # print(dont_stemmify_,similarity_)
+                            # print([x is True for x in [intent_df.at[i,"EXCEMPT_STEMM"], intent_df.at[i,"EXCEMPT_SYNON"]]])
+                            # print([x for x in [intent_df.at[i,"EXCEMPT_STEMM"], intent_df.at[i,"EXCEMPT_SYNON"]]])
+                            # print("###")
+                            intent_df.at[i,"TOKEN"] = get_phrase_synonym(row.TOKEN,words_already_used,word_vectors,similarity=similarity_,dont_stemmify = dont_stemmify_)
                         self.add_to_dict(key,intent_df, target)
-
-                    pass
-                for seq_in,seq_out,augment_settings in intents_dict[key]:
-                    stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist,unique_values_only_list = augment_settings
-                    # stemmify_ignorelist_,synonym_ignorelist_,shuffle_ignorelist_ = cls.get_deepcopies((stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist))
-                    seq_in = seq_in.split()
-                    for i in range(len(seq_in)):
-                        rand = random.randint(0,10)/10
-                        if rand<p:
-                            '''
-                                with p chance replace the word with its synonym or root's synonym
-                                if the word is in any ignorelist, act accordingly
-                            '''
-                            dont_stemmify_ = False
-                            similarity_ = similarity
-                            if synonym_ignorelist[i] is True:
-                                similarity_ = 0.95
-                                dont_stemmify_ = True
-                            if stemmify_ignorelist[i] is True:
-                                dont_stemmify_ = True
-                            seq_in[i] = get_synonym(seq_in[i],words_already_used,similarity_,dont_stemmify_) or seq_in[i]
-                    if None not in seq_in:
-                        seq_in = " ".join(seq_in)
-                        self.add_to_dict(intent_name,intent_df, target)
-                        # self.add_to_dict(augmented_dict, key, (seq_in,seq_out,cls.get_deepcopies(augment_settings)))
 
 def tests():
     from copy import copy

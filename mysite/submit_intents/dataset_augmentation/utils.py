@@ -98,12 +98,12 @@ def synonym_cacher(key,word_vectors):
     else:
         try:
             vec = word_vectors.most_similar(positive=[key],negative=[])
-        except:
+        except KeyError:
             vec = None
         synonym_cache[key] = vec
         return vec
 
-def get_synonym(word,words_already_used,similarity,word_vectors,dont_stemmify=False):
+def get_word_synonym(word,words_already_used,word_vectors,similarity,dont_stemmify=False):
     '''
         returns the synonym
         if can't the synonym of the root, and if still cant returns None
@@ -130,10 +130,11 @@ def get_synonym(word,words_already_used,similarity,word_vectors,dont_stemmify=Fa
     else:
         return None
 
-def get_phrase_synonym(phrase,words_already_used,similarity,word_vectors,dont_stemmify=False):
+def get_phrase_synonym(phrase,words_already_used,word_vectors,similarity,dont_stemmify=False):
     phrase_synonym = []
     for word in phrase.split():
-        synonym = get_synonym(phrase,words_already_used,similarity,word_vectors,dont_stemmify=False)
+        synonym = get_word_synonym(phrase,words_already_used,word_vectors,similarity,dont_stemmify=False)
+        synonym = synonym or word
         phrase_synonym.append(synonym)
     return " ".join(phrase_synonym)
 

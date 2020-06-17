@@ -11,8 +11,7 @@ from django import forms
 from .models import *
 from .forms import *
 from .create_dataset import CreateDataset, DATASET_DIR
-# from .augment_dataset import AugmentDataset
-from .dataset_augmentation import AugmentDataset
+from .dataset_augmentation import do_augmentation, clear_augmented_entries
 
 def update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,excempt_shuffle,unique_values_only):
     '''
@@ -136,9 +135,9 @@ def export_dataset(request):
         elif "import_dataset" in request.POST:
             CreateDataset.import_dataset()
         elif "augment_dataset" in request.POST:
-            AugmentDataset.do_augmentation()
+            do_augmentation()
         elif "clear_augmented_entries" in request.POST:
-            AugmentDataset.clear_augmented_entries()
+            clear_augmented_entries()
         elif "create_dataset_split" in request.POST:
             if request.POST["create_dataset_split"] == "create_dataset_split_70%-15%-15%":
                 CreateDataset.create_dataset_split([0.7,0.15,0.15],interleave_categories,shuffle)
