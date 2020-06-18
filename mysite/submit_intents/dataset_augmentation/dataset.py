@@ -3,6 +3,8 @@ import pandas as pd
 from ..models import IntentInstance, IntentCategory
 from .utils import goo_to_dataframe, dataframe_to_goo, get_augmentation_settings, get_phrase_synonym
 from .utils import RandomRecordPicker
+from .utils import scramble_the_phrase
+from .utils import word_vectors
 from copy import deepcopy
 import random
 '''
@@ -27,6 +29,7 @@ subject_start            NaN            NaN          True           NaN
 2                             yap     send_email            NaN            NaN           NaN           NaN 
 '''
 
+
 def prevent_augmenting_self(func):
     def inner(self, *args, **kwargs):
         if "target" in kwargs:
@@ -39,6 +42,7 @@ def prevent_augmenting_self(func):
     return inner
 
 class AugmentableDataset:
+    print("here")
     def __init__(self):
         self._intents_dict = {}
         self._augmentation_settings_dict = get_augmentation_settings()
@@ -86,12 +90,23 @@ class AugmentableDataset:
                 df = pd.merge(df,augmentation_setting_df,on='SLOT',how='left')
                 self.add_to_dict(intent_label,df, target=self)
 
-
+    #TODO: fix list creation at every step
+    #TODO: implement comparison between same SLOTs instead of comparing everything with UNIQUE_VALUES like now
     def handle_unique_requirement(self,intent_df, rest_of_dfs):
         '''
             checks if specified slot values are unique amongst other intents
         '''
-        pass
+        uniques_series = intent_df[intent_df["UNIQUE_VALUES"]==True]["TOKEN"]
+        # uniques_series = intent_df[intent_df["UNIQUE_VALUES"]==True]["SLOT"]
+        rest_of_items_ = [df[df["UNIQUE_VALUES"]==True]["TOKEN"] for df in rest_of_dfs]
+        rest_of_items = []
+        for x in rest_of_items_:
+            for i,item in x.items():
+                rest_of_items.append(item)
+
+        for i, item in uniques_series.items():
+            if item in rest_of_items:
+                intent_df.at[i,"TOKEN"] = scramble_the_phrase(item)
 
     @prevent_augmenting_self
     def do_synonym_replacement(self, target, p=1/5, n=1, similarity=0.7):
@@ -103,8 +118,8 @@ class AugmentableDataset:
         # TODO try to use different replacement synonyms on each intent throughout a category
         # from gensim.models import KeyedVectors
 
-        from .language import get_gensim_word_vectors
-        word_vectors = get_gensim_word_vectors()
+        # from .language import get_gensim_word_vectors
+        # word_vectors = get_gensim_word_vectors()
 
         for key, intents_list in self._intents_dict.items():
             words_already_used = []
@@ -212,4 +227,6 @@ class AugmentableDataset:
                     seq_out = seq_out + " " + noise_tail_seqout
 
                 resultant_intent_df = goo_to_dataframe(seq_in,seq_out)
+                augmentation_setting_df = self._augmentation_settings_dict[key]
+                resultant_intent_df = pd.merge(resultant_intent_df,augmentation_setting_df,on='SLOT',how='left')
                 self.add_to_dict(key,resultant_intent_df,target)

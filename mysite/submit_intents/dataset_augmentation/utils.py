@@ -24,7 +24,9 @@ subject_start            NaN            NaN          True           NaN
 1  hadi gel köyümüze geri dönelim        message            NaN            NaN          True          True
 2                             yap     send_email            NaN            NaN           NaN           NaN 
 '''
-
+#TODO: singleton this in a way that it leaves scope after augmentation is done?
+from .language import get_gensim_word_vectors
+word_vectors = get_gensim_word_vectors()
 
 def goo_to_dataframe(seq_in,seq_out):
     seq_in_ = seq_in.split()
@@ -155,3 +157,19 @@ class RandomRecordPicker:
         self._counters_dict[choice] = (self._counters_dict[choice] + 1)%len(records_list)
 
         return record     
+
+scramble_words_already_used = []
+def scramble_the_phrase(phrase):
+    #swap paces:
+    phrase = phrase.split()
+    indexes = [i for i in range(len(phrase))]
+    if len(indexes) > 1:
+        idx1 = random.choice(indexes)
+        indexes.remove(idx1)   
+        idx2 = random.choice(indexes)
+        temp = phrase[idx1]
+        phrase[idx1] = phrase[idx2]
+        phrase[idx2] = temp
+    phrase = " ".join(phrase)
+    phrase = get_phrase_synonym(phrase,scramble_words_already_used,word_vectors,0.45,dont_stemmify=False)
+    return phrase
