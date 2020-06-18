@@ -36,29 +36,25 @@ def do_augmentation():
 
     # Augmentation steps here:
     # 1. Add shuffled copies
-    # cls.shuffle(intents_dict, augmented_dict, 1)
+    original_dataset.do_shuffle(target = augmented_dataset, n=1)
+    copy_of_shuffled = deepcopy(original_dataset)
 
-    # shuffle_dict = deepcopy(augmented_dict)
-    # # 2. Add synonym replaced copies of the original and shuffled entries
+    # 2. Add synonym replaced copies of the original and shuffled entries
     original_dataset.do_synonym_replacement(target = augmented_dataset, p=1/5, n=1, similarity=0.65)
+    copy_of_shuffled.do_synonym_replacement(target = augmented_dataset, p=1/5, n=1, similarity=0.90)
 
-    # cls.synonym_replacement(intents_dict, augmented_dict, p=1/5, n=1, similarity=0.85)
-    # # cls.synonym_replacement(intents_dict, augmented_dict, p=1/8, n=1, similarity=0.65)
-    # # cls.synonym_replacement(intents_dict, augmented_dict, p=1/10, n=1, similarity=0.55)
-    # # cls.synonym_replacement(shuffle_dict, augmented_dict, p=1/10, n=1, similarity=0.85)
-
-    # # 3. Add stemmified copies
-    # cls.stemmify(intents_dict, augmented_dict)
+    # 3. Add stemmified copies
+    original_dataset.do_stemmify(target=augmented_dataset)
 
     # # 4. Remove duplicates from the augmented list so far
-    # cls.remove_duplicates(augmented_dict)
+    augmented_dataset.remove_duplicates()
 
     # # 5. Add noise added copies of the augmented dataset
     # augmented_dict_1 = deepcopy(augmented_dict)
-    # cls.cross_category_noise(augmented_dict_1, augmented_dict, 1, 1/2)
+    deepcopy(augmented_dataset).add_cross_category_noise(target=augmented_dataset, n=1, fraction=1/2)
 
-    # # 6. Add noise added copies of the original dataset
-    # cls.cross_category_noise(intents_dict, augmented_dict, 2, 1/2)
+    # 6. Add noise added copies of the original dataset
+    original_dataset.add_cross_category_noise(target=augmented_dataset, n=2, fraction=1/2)
 
     # # # 7. Add one more copy of the original dataset
     # cls.shuffle(intents_dict, augmented_dict, 1)

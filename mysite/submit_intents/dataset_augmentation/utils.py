@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd 
 from ..models import IntentInstance, IntentCategory
 from .language.lemmatizer_tr import get_phrase_root
+import random
 '''
 #### augmentation_setting dataframes are of the form:
 SendEmail                EXCEMPT_STEMM  EXCEMPT_SYNON EXCEMPT_SHUFF UNIQUE_VALUES
@@ -138,22 +139,19 @@ def get_phrase_synonym(phrase,words_already_used,word_vectors,similarity,dont_st
         phrase_synonym.append(synonym)
     return " ".join(phrase_synonym)
 
-# def group_words_into_slots(seq_in,seq_out):
-#     '''
-#         returns seq_in_list and seq_out_list 
-#         where the lists contain token strings that are grouped words
-#     '''
-#     seq_in_ = seq_in.split()
-#     seq_out_ = seq_out.split()
-#     seq_in_list = [seq_in[0]]
-#     seq_out_list = [seq_out[0]]
+class RandomRecordPicker:
+    def __init__(self,_intents_dict):
+        self._intents_dict = _intents_dict
+        self._counters_dict = {x:0 for x in self._intents_dict}
+    def pick_record_randomly(self,key_to_omit):
+        allowed_keys = list(self._counters_dict.keys())
+        allowed_keys.remove(key_to_omit)
+        # pick a key
+        choice = random.choice(allowed_keys)
+        # pick a record from the list
+        records_list = self._intents_dict[choice]
+        record = records_list[self._counters_dict[choice]]
+        # increment index at the counter
+        self._counters_dict[choice] = (self._counters_dict[choice] + 1)%len(records_list)
 
-#     for i, (word, token) in enumerate(zip(seq_in_[1:],seq_out_[1:])):
-#         if token.startswith("I-") and (seq_out_list[-1].startswith("B-") or seq_out_list[-1].startswith("I-")):
-#             seq_in_list[-1] += " " + word
-#             seq_out_list[-1] += " " + token
-#         else:
-#             seq_in_list.append(word)
-#             seq_out_list.append(token)
-
-#     return seq_in_list, seq_out_list
+        return record     

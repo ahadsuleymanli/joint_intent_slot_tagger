@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd 
 from ..models import IntentInstance, IntentCategory
 from .utils import goo_to_dataframe, dataframe_to_goo, get_augmentation_settings, get_phrase_synonym
+from .utils import RandomRecordPicker
 from copy import deepcopy
 import random
 '''
@@ -25,31 +26,17 @@ subject_start            NaN            NaN          True           NaN
 1  hadi gel köyümüze geri dönelim        message            NaN            NaN          True          True
 2                             yap     send_email            NaN            NaN           NaN           NaN 
 '''
-# class Intent:
-#     '''
-#         represents one datum
-#         the datum is represented as a dataframe
-#     '''
-#     def __init__(self,seq_in,seq_out,label,augmentation_setting_df):
-#         '''
-#             seq_in: input string
-#             seq_out: ground truth of slots
-#             label: ground truth value of the category
-#         '''
-#         seq_in_list, seq_out_list = group_words_into_slots(seq_in,seq_out)
-#         self.df = pd.DataFrame({"TOKEN":np.array(seq_in_list),"SLOT":np.array(seq_out_list)})
-#     def get_strings(self):
-#         '''
-#             returns seq_in, seq_out, label
-#         '''
-#         pass
 
-class Singleton(object):
-    _instance = None
-    def __new__(cls, *args, **kwargs):
-        if not cls._instance:
-            cls._instance = super(Singleton, cls).__new__(cls, *args, **kwargs)
-        return cls._instance
+def prevent_augmenting_self(func):
+    def inner(self, *args, **kwargs):
+        if "target" in kwargs:
+            target = kwargs["target"]
+        else:
+            target = args[0]
+        if target is self:
+            raise Exception('Should not augment self')
+        func(self,*args, **kwargs)
+    return inner
 
 class AugmentableDataset:
     def __init__(self):
@@ -106,7 +93,7 @@ class AugmentableDataset:
         '''
         pass
 
-    
+    @prevent_augmenting_self
     def do_synonym_replacement(self, target, p=1/5, n=1, similarity=0.7):
         '''
             target: target AugmentableDataset object
@@ -118,7 +105,6 @@ class AugmentableDataset:
 
         from .language import get_gensim_word_vectors
         word_vectors = get_gensim_word_vectors()
-        cache = {}
 
         for key, intents_list in self._intents_dict.items():
             words_already_used = []
@@ -140,62 +126,90 @@ class AugmentableDataset:
                             '''
                             dont_stemmify_ = True if any([x is True for x in [intent_df.at[i,"EXCEMPT_STEMM"], intent_df.at[i,"EXCEMPT_SYNON"]]]) else False
                             similarity_ = 0.95 if intent_df.at[i,"EXCEMPT_SYNON"] is True else similarity
-                            # print("here",intent_df.at[i,"EXCEMPT_SYNON"])
-                            # print(dont_stemmify_,similarity_)
-                            # print([x is True for x in [intent_df.at[i,"EXCEMPT_STEMM"], intent_df.at[i,"EXCEMPT_SYNON"]]])
-                            # print([x for x in [intent_df.at[i,"EXCEMPT_STEMM"], intent_df.at[i,"EXCEMPT_SYNON"]]])
-                            # print("###")
                             intent_df.at[i,"TOKEN"] = get_phrase_synonym(row.TOKEN,words_already_used,word_vectors,similarity=similarity_,dont_stemmify = dont_stemmify_)
                         self.add_to_dict(key,intent_df, target)
+    @prevent_augmenting_self
+    def do_shuffle(self, target, n=1):
+        '''
+            n: number of times to repeat the step. each time new record is added
+            target: AugmentableDataset where the records will be stored
+        '''
+        for key, intents_list in self._intents_dict.items():
+            for i in range(n):
+                for intent_df in intents_list:
+                    intent_df = intent_df.copy(deep=True) #creating a deep copy that will be modified
+                    allowed_indexes = list(intent_df[intent_df['EXCEMPT_SHUFF'] != True].index.values)
+                    
+                    #TODO: implement pushing the swappable into the indexes 0 and -1
+                    if len(allowed_indexes) > 1:
+                        idx1 = random.choice(allowed_indexes)
+                        allowed_indexes.remove(idx1)   
+                        idx2 = random.choice(allowed_indexes)
+                        
+                        temp = intent_df.iloc[idx1].copy(deep=True)
+                        intent_df.iloc[idx1] = intent_df.iloc[idx2]
+                        intent_df.iloc[idx2] = temp
 
-def tests():
-    from copy import copy
-    import time
-    original_dataset = AugmentableDataset()
-    augmented_dataset = deepcopy(original_dataset)
-    original_dataset.fill_intents_dict()
-    
-    for key, x in original_dataset._intents_dict.items():
-        # original_dataset._intents_dict
-        
-        for y in x:
-            print(y,"\n")
-            break
-        break
+                        self.add_to_dict(key,intent_df,target)
+    @prevent_augmenting_self
+    def do_stemmify(self, target):
+        '''
+            target: AugmentableDataset
+        '''
+        from .language.lemmatizer_tr import get_phrase_root
+        for key, intents_list in self._intents_dict.items():
+            for intent_df in intents_list:
+                intent_df = intent_df.copy(deep=True) #creating a deep copy that will be modified
+                for i, row in intent_df.iterrows():
+                    intent_df.at[i,"TOKEN"] = get_phrase_root(intent_df.at[i,"TOKEN"])
+                self.add_to_dict(key,intent_df,target)
 
-    # intents_dict = {}
-    # intents_dict = {}
-    # augmented_dict = {}
-    # unique_labels = IntentInstance.objects.values_list("label",flat=True).distinct()
-    # unique_labels = [x for x in unique_labels]
-    # unique_labels=["SendEmail"]
-    # # Get lates augmentation settings:
-    # augmentation_settings = get_augmentation_settings()
-    # # # Create intents_dict
+    def remove_duplicates(self):
+        for key, intents_list in self._intents_dict.items():
+            indexes_to_pop = set()
+            list_len = len(intents_list)
+            for i in range(list_len):
+                for j in range(i+1,list_len):
+                    if intents_list[i].equals(intents_list[j]):
+                        indexes_to_pop.add(j)
+            for i in sorted(indexes_to_pop, reverse=True):
+                self._intents_dict[key].pop(i)
 
-    # for intent_label in unique_labels:
-    #     '''
-    #         creating a dict of intent categories mapped to Intent objects
-    #     '''
-    #     intents_by_label = IntentInstance.objects.filter(label=intent_label)
-    #     augmentation_setting_df = augmentation_settings[intent_label]
-    #     for intent in intents_by_label:
-    #         df = goo_to_dataframe(intent.seq_in,intent.seq_out)
-            
-    #         #outer join augmentation settings
-    #         df = pd.merge(df,augmentation_setting_df,on='SLOT',how='left')
+    @prevent_augmenting_self
+    def add_cross_category_noise(self,target,n,fraction):
+        '''
+            n times per intent
+            fraction of unrelated intent to add to the start and the tail of the intent
+        '''
+        from math import ceil, floor
+        chance_to_omit = 1/8
+        record_picker = RandomRecordPicker(self.intents_dict)
+        for key, intents_list in self._intents_dict.items():
+            for intent_df in intents_list:
+                seq_in,seq_out = dataframe_to_goo(intent_df)
+                
+                # create noise sequences to be added to head and tail of the original sequence
+                noise_head,_ = dataframe_to_goo(record_picker.pick_record_randomly(key))
+                noise_head = " ".join(noise_head.split()[ceil(len(noise_head.split())/2):])
+                noise_head_seqout = " ".join(["O"]*len(noise_head.split()))
+                noise_tail,_ = dataframe_to_goo(record_picker.pick_record_randomly(key))
+                noise_tail = " ".join(noise_tail.split()[:floor(len(noise_tail.split())/2)])
+                noise_tail_seqout = " ".join(["O"]*len(noise_tail.split()))
 
-    #         # # creating ignore lists
-    #         # slots = intent.seq_out.replace("B-","").replace("I-","").split()
-    #         # for slot in slots:
-    #         #     stemmify_ignorelist.append(slot in excempt_stemmify_tokens)
-    #         #     synonym_ignorelist.append(slot in excempt_synonym_tokens)
-    #         #     shuffle_ignorelist.append(slot in excempt_shuffle_tokens)
-    #         #     unique_values_only_list.append(slot in unique_values_only_tokens)
+                rand = random.randint(0,10)/10
+                if rand<chance_to_omit:
+                    noise_head = ""
+                    noise_head_seqout = ""
+                elif rand<chance_to_omit*2:
+                    noise_tail = ""
+                    noise_tail_seqout = ""
 
-    #         # # Verifying list lengths
-    #         # lengths = map(len,[stemmify_ignorelist,synonym_ignorelist,shuffle_ignorelist,unique_values_only_list,intent.seq_in.split(),intent.seq_out.split()])
-    #         # if not len(set(lengths))==1:
-    #         #     raise Exception("All lists are not the same length!")
+                if noise_head:
+                    seq_in = noise_head + " " + seq_in
+                    seq_out = noise_head_seqout + " " + seq_out
+                if noise_tail:
+                    seq_in = seq_in + " " + noise_tail
+                    seq_out = seq_out + " " + noise_tail_seqout
 
-    #         # cls.add_to_dict(intents_dict, intent_label, (intent.seq_in,intent.seq_out,(stemmify_ignorelist,synonym_ignorelist, shuffle_ignorelist,unique_values_only_list)))
+                resultant_intent_df = goo_to_dataframe(seq_in,seq_out)
+                self.add_to_dict(key,resultant_intent_df,target)
