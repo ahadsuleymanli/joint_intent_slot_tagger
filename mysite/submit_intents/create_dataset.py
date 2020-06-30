@@ -65,6 +65,11 @@ class CreateDataset:
                 for key in intents_dict:
                     if len(intents_dict[key]):
                         seq_in, seq_out = intents_dict[key].pop(0)
+                        seq_out = seq_out.split()
+                        for i in range(len(seq_out)):
+                            if seq_out[i] in ["B-text","I-text","B-message","B-subject"]:
+                                seq_out[i] = "O"
+                        seq_out = " ".join(seq_out)
                         label_file.write(key+'\n')
                         seq_in_file.write(seq_in+'\n')
                         seq_out_file.write(seq_out+'\n')

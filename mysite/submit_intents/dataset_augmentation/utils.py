@@ -127,6 +127,7 @@ def get_word_synonym(word,words_already_used,word_vectors,similarity,dont_stemmi
 
     synonym = get_synonym_helper(word,words_already_used,similarity)
     if synonym:
+        print(synonym)
         return synonym
     elif not dont_stemmify:
         return get_synonym_helper(get_phrase_root(word),words_already_used,similarity)
@@ -158,8 +159,7 @@ class RandomRecordPicker:
 
         return record     
 
-scramble_words_already_used = []
-def scramble_the_phrase(phrase):
+def scramble_the_phrase(phrase, scramble_words_already_used = []):
     #swap paces:
     phrase = phrase.split()
     indexes = [i for i in range(len(phrase))]
@@ -171,5 +171,6 @@ def scramble_the_phrase(phrase):
         phrase[idx1] = phrase[idx2]
         phrase[idx2] = temp
     phrase = " ".join(phrase)
-    phrase = get_phrase_synonym(phrase,scramble_words_already_used,word_vectors,0.45,dont_stemmify=False)
+    # phrase = get_phrase_synonym(phrase,scramble_words_already_used,word_vectors,0.35,dont_stemmify=False)
     return phrase
+

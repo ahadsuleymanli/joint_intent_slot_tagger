@@ -8,3 +8,20 @@ def get_gensim_word_vectors():
     from .lemmatizer_tr import get_phrase_root
     word_vectors = KeyedVectors.load_word2vec_format(os.path.join(NLP_DIR,"trmodel"), binary=True)
     return word_vectors
+
+import random
+import itertools
+
+def random_line_generator():
+    file_location = os.path.join(NLP_DIR,"random_sentences.txt")
+    with open(file_location, 'r+') as f:
+        line = next(f)
+        skips_left = 0
+        for aline in itertools.cycle(f):
+            # print("getting",num)
+            line = aline
+            if skips_left == 0:
+                skips_left = random.randrange(50)
+                yield line
+            else:
+                skips_left -= 1

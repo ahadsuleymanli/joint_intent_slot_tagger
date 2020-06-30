@@ -7,6 +7,7 @@ from .utils import scramble_the_phrase
 from .utils import word_vectors
 from copy import deepcopy
 import random
+from .language import random_line_generator
 '''
 #### augmentation_setting dataframes are of the form:
 SendEmail                EXCEMPT_STEMM  EXCEMPT_SYNON EXCEMPT_SHUFF UNIQUE_VALUES
@@ -97,16 +98,17 @@ class AugmentableDataset:
             checks if specified slot values are unique amongst other intents
         '''
         uniques_series = intent_df[intent_df["UNIQUE_VALUES"]==True]["TOKEN"]
+        if uniques_series.empty:
+            return
         # uniques_series = intent_df[intent_df["UNIQUE_VALUES"]==True]["SLOT"]
         rest_of_items_ = [df[df["UNIQUE_VALUES"]==True]["TOKEN"] for df in rest_of_dfs]
         rest_of_items = []
         for x in rest_of_items_:
             for i,item in x.items():
                 rest_of_items.append(item)
-
         for i, item in uniques_series.items():
             if item in rest_of_items:
-                intent_df.at[i,"TOKEN"] = scramble_the_phrase(item)
+                intent_df.at[i,"TOKEN"] = scramble_the_phrase(item,[])
 
     @prevent_augmenting_self
     def do_synonym_replacement(self, target, p=1/5, n=1, similarity=0.7):
@@ -218,6 +220,55 @@ class AugmentableDataset:
                 elif rand<chance_to_omit*2:
                     noise_tail = ""
                     noise_tail_seqout = ""
+                elif rand<chance_to_omit*5:
+                    continue
+
+                if noise_head:
+                    seq_in = noise_head + " " + seq_in
+                    seq_out = noise_head_seqout + " " + seq_out
+                if noise_tail:
+                    seq_in = seq_in + " " + noise_tail
+                    seq_out = seq_out + " " + noise_tail_seqout
+
+                resultant_intent_df = goo_to_dataframe(seq_in,seq_out)
+                augmentation_setting_df = self._augmentation_settings_dict[key]
+                resultant_intent_df = pd.merge(resultant_intent_df,augmentation_setting_df,on='SLOT',how='left')
+                self.add_to_dict(key,resultant_intent_df,target)
+    
+    @prevent_augmenting_self
+    def add_random_noise(self,target,n):
+        '''
+            n times per intent
+
+        '''
+
+        gen = random_line_generator()
+
+        from math import ceil, floor
+        chance_to_omit = 1/8
+        for key, intents_list in self._intents_dict.items():
+            for intent_df in intents_list:
+                seq_in,seq_out = dataframe_to_goo(intent_df)
+                seq_len = len(seq_in)
+                # create noise sequences to be added to head and tail of the original sequence
+                noise_head = next(gen)
+                noise_head = noise_head[:80] if seq_len<60 else noise_head[:50]
+                noise_head = " ".join(noise_head.split()[ceil(len(noise_head.split())/2):])
+                noise_head_seqout = " ".join(["O"]*len(noise_head.split()))
+                noise_tail = next(gen)
+                noise_tail = noise_tail[:80] if seq_len<60 else noise_tail[:50]
+                noise_tail = " ".join(noise_tail.split()[:floor(len(noise_tail.split())/2)])
+                noise_tail_seqout = " ".join(["O"]*len(noise_tail.split()))
+
+                rand = random.randint(0,10)/10
+                if rand<chance_to_omit:
+                    noise_head = ""
+                    noise_head_seqout = ""
+                elif rand<chance_to_omit*2:
+                    noise_tail = ""
+                    noise_tail_seqout = ""
+                elif rand<chance_to_omit*5:
+                    continue
 
                 if noise_head:
                     seq_in = noise_head + " " + seq_in

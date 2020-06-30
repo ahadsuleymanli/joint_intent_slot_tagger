@@ -45,18 +45,21 @@ def do_augmentation():
     # 3. Add stemmified copies
     original_dataset.do_stemmify(target=augmented_dataset)
 
-    # # 4. Remove duplicates from the augmented list so far
+    # 4. Remove duplicates from the augmented list so far
     augmented_dataset.remove_duplicates()
 
-    # # 5. Add noise added copies of the augmented dataset
+    # 5. Add noise that are partial intents
     # augmented_dict_1 = deepcopy(augmented_dict)
     deepcopy(augmented_dataset).add_cross_category_noise(target=augmented_dataset, n=1, fraction=1/2)
 
-    # 6. Add noise added copies of the original dataset
+    # 6. Add noise that are partial intents
     original_dataset.add_cross_category_noise(target=augmented_dataset, n=2, fraction=1/2)
 
-    # # # 7. Add one more copy of the original dataset
-    # cls.shuffle(intents_dict, augmented_dict, 1)
+    # 7. Add noise that is complete random texts from some book
+    deepcopy(augmented_dataset).add_random_noise(target=augmented_dataset, n=2)
+
+    # 8. Add one more copy of the original dataset
+    original_dataset.do_shuffle(target = augmented_dataset, n=1)
 
     for key, intents_list in augmented_dataset.intents_dict.items():
         '''
