@@ -33,6 +33,22 @@ class IntentCategory(models.Model):
         if not IntentCategory.objects.filter(intent_label=self.intent_label):
             super().save(*args, **kwargs)
 
+class IntentCCIgnore(models.Model):
+    '''
+        list of intent categories to ignore in cross category augmentation step
+    '''
+    intent = models.ForeignKey(IntentCategory, on_delete=models.CASCADE)
+    ignore_intent = models.CharField(max_length=50)
+    def save(self, *args, **kwargs):
+        '''
+            ensures the unique key and existance of intent counterpart
+        '''
+        if IntentCCIgnore.objects.filter(ignore_intent=self.ignore_intent):
+            return
+        if self.ignore_intent not in list(IntentCategory.objects.all().values_list('intent_label',flat=True)):
+            return
+        super().save(*args, **kwargs)
+
 class IntentSlot(models.Model):
     intent = models.ForeignKey(IntentCategory, on_delete=models.CASCADE)
     slot_name = models.CharField(max_length=50)

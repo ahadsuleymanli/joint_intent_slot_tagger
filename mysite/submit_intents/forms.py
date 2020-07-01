@@ -61,6 +61,7 @@ class SubmitIntentsForm(forms.ModelForm):
     excempt_synonym = forms.CharField(label='', widget=simpletextfield)
     excempt_shuffle = forms.CharField(label='', widget=simpletextfield)
     unique_values_only = forms.CharField(label='', widget=simpletextfield)
+    intents_CC_ignore = forms.CharField(label='', widget=simpletextfield)
     settings_submit = forms.CharField()
 
 
@@ -91,9 +92,12 @@ class SubmitIntentsForm(forms.ModelForm):
         excempt_synonym_list = self.instance.intentslot_set.filter(excempt_synonym=True).values('slot_name')
         excempt_shuffle_list = self.instance.intentslot_set.filter(excempt_shuffle=True).values('slot_name')
         unique_values_only_list = self.instance.intentslot_set.filter(unique_values_only=True).values('slot_name')
+        excempt_intents_CC_list = self.instance.intentccignore_set.all().values("ignore_intent")
+
         def serialize_slotlist(querylist):
             return " ".join([x["slot_name"] for x in querylist])
         self.fields["excempt_stemmify"].initial = serialize_slotlist(excempt_stemmify_list)
         self.fields["excempt_synonym"].initial = serialize_slotlist(excempt_synonym_list)
         self.fields["excempt_shuffle"].initial = serialize_slotlist(excempt_shuffle_list)
         self.fields["unique_values_only"].initial = serialize_slotlist(unique_values_only_list)
+        self.fields["intents_CC_ignore"].initial = " ".join([x["ignore_intent"] for x in excempt_intents_CC_list])

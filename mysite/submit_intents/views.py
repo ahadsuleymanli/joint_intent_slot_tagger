@@ -13,7 +13,7 @@ from .forms import *
 from .create_dataset import CreateDataset, DATASET_DIR
 from .dataset_augmentation import do_augmentation, clear_augmented_entries
 
-def update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,excempt_shuffle,unique_values_only):
+def update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,excempt_shuffle,unique_values_only, intents_CC_ignore):
     '''
         excempt_stemmify: list of slots to except from the stemmify step
         excempt_synonym: list of slots to except from the synonym step
@@ -31,6 +31,10 @@ def update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,ex
 
     intent.intentslot_set.filter(slot_name__in=unique_values_only).update(unique_values_only=True)
     intent.intentslot_set.exclude(slot_name__in=unique_values_only).update(unique_values_only=False)
+    
+    IntentCCIgnore.objects.filter(intent=intent).delete()
+    for x in intents_CC_ignore:
+        IntentCCIgnore(intent=intent,ignore_intent=x).save()
 
 
 def add_intent_to_db(label, seq_in, seq_out, id=None):
@@ -77,8 +81,9 @@ def index(request):
             excempt_synonym = get_if_exists("excempt_synonym").split()
             excempt_shuffle = get_if_exists("excempt_shuffle").split()
             unique_values_only = get_if_exists("unique_values_only").split()
+            intents_CC_ignore = get_if_exists("intents_CC_ignore").split()
             intent_name = cd["intent_label_choices"]
-            update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,excempt_shuffle,unique_values_only)
+            update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,excempt_shuffle,unique_values_only,intents_CC_ignore)
         elif "intent_id_to_delete" in cd:
             delete_intent_from_db(cd["intent_id_to_delete"])
 
