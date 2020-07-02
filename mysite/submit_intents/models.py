@@ -39,12 +39,12 @@ class IntentCCIgnore(models.Model):
     '''
     intent = models.ForeignKey(IntentCategory, on_delete=models.CASCADE)
     ignore_intent = models.CharField(max_length=50)
+    class Meta:
+        unique_together = (('intent', 'ignore_intent'),)
     def save(self, *args, **kwargs):
         '''
             ensures the unique key and existance of intent counterpart
         '''
-        if IntentCCIgnore.objects.filter(ignore_intent=self.ignore_intent):
-            return
         if self.ignore_intent not in list(IntentCategory.objects.all().values_list('intent_label',flat=True)):
             return
         super().save(*args, **kwargs)

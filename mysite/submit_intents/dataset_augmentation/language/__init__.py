@@ -12,8 +12,8 @@ def get_gensim_word_vectors():
 import random
 import itertools
 
-def random_line_generator():
-    file_location = os.path.join(NLP_DIR,"random_sentences.txt")
+def random_line_generator(txt_name):
+    file_location = os.path.join(NLP_DIR,txt_name)
     with open(file_location, 'r+') as f:
         line = next(f)
         skips_left = 0

@@ -47,7 +47,7 @@ class AugmentableDataset:
     def __init__(self):
         self._intents_dict = {}
         self._augmentation_settings_dict = get_augmentation_settings()
-
+        self._random_line_gen = random_line_generator("random_sentences2.txt")
     @property
     def intents_dict(self):
         return self._intents_dict
@@ -61,14 +61,15 @@ class AugmentableDataset:
         obj._augmentation_settings_dict = deepcopy(self._augmentation_settings_dict, memo)
         return obj
 
-    def add_to_dict(self,intent_name,intent_df, target):
+    def add_to_dict(self,intent_name,intent_df, target,first_add=False):
         '''
             writes the intent to the target AugmentedDataset object's dictionary
         '''
         if intent_name not in target._intents_dict:
             target._intents_dict[intent_name] = [intent_df,]
         else:
-            self.handle_unique_requirement(intent_df, target._intents_dict[intent_name])
+            if not first_add:
+                self.handle_unique_requirement(intent_df, target._intents_dict[intent_name])
             target._intents_dict[intent_name].append(intent_df)
     
     def fill_intents_dict(self):
@@ -89,7 +90,7 @@ class AugmentableDataset:
                 outer join augmentation settings
                 '''
                 df = pd.merge(df,augmentation_setting_df,on='SLOT',how='left')
-                self.add_to_dict(intent_label,df, target=self)
+                self.add_to_dict(intent_label,df, target=self,first_add=True)
 
     #TODO: fix list creation at every step
     #TODO: implement comparison between same SLOTs instead of comparing everything with UNIQUE_VALUES like now
@@ -98,17 +99,12 @@ class AugmentableDataset:
             checks if specified slot values are unique amongst other intents
         '''
         uniques_series = intent_df[intent_df["UNIQUE_VALUES"]==True]["TOKEN"]
-        if uniques_series.empty:
-            return
-        # uniques_series = intent_df[intent_df["UNIQUE_VALUES"]==True]["SLOT"]
-        rest_of_items_ = [df[df["UNIQUE_VALUES"]==True]["TOKEN"] for df in rest_of_dfs]
-        rest_of_items = []
-        for x in rest_of_items_:
-            for i,item in x.items():
-                rest_of_items.append(item)
         for i, item in uniques_series.items():
-            if item in rest_of_items:
-                intent_df.at[i,"TOKEN"] = scramble_the_phrase(item,[])
+            rand_len = random.randrange(10)
+            line = next(self._random_line_gen)
+            line = " ".join(line.split()[:rand_len])
+            line = line[:100]
+            intent_df.at[i,"TOKEN"] = line
 
     @prevent_augmenting_self
     def do_synonym_replacement(self, target, p=1/5, n=1, similarity=0.7):
@@ -242,7 +238,7 @@ class AugmentableDataset:
 
         '''
 
-        gen = random_line_generator()
+        gen = random_line_generator("random_sentences.txt")
 
         from math import ceil, floor
         chance_to_omit = 1/8

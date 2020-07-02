@@ -149,11 +149,13 @@ class RandomRecordPicker:
         # self.intent_exceptions = IntentCCIgnore.objects.filter(intent.intent_name=self.ignore_intent)
     def pick_record_randomly(self,key_to_omit):
         keys_to_omit = [key_to_omit]
-        IntentCategory
-        excempt_keys = IntentCategory.objects.get(intent_label=key_to_omit).intentccignore_set.all().values("ignore_intent")
+        excempt_keys = IntentCategory.objects.get(intent_label=key_to_omit).intentccignore_set.all().values_list("ignore_intent",flat=True)
+        excempt_keys = [x for x in excempt_keys]
+        keys_to_omit.extend(excempt_keys)
         print("excempt keys: ", excempt_keys)
         allowed_keys = list(self._counters_dict.keys())
-        allowed_keys.remove(key_to_omit)
+        for key in keys_to_omit:
+            allowed_keys.remove(key)
         # pick a key
         choice = random.choice(allowed_keys)
         # pick a record from the list
