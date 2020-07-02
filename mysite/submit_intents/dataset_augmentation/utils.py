@@ -127,7 +127,6 @@ def get_word_synonym(word,words_already_used,word_vectors,similarity,dont_stemmi
 
     synonym = get_synonym_helper(word,words_already_used,similarity)
     if synonym:
-        print(synonym)
         return synonym
     elif not dont_stemmify:
         return get_synonym_helper(get_phrase_root(word),words_already_used,similarity)
@@ -149,13 +148,14 @@ class RandomRecordPicker:
         # self.intent_exceptions = IntentCCIgnore.objects.filter(intent.intent_name=self.ignore_intent)
     def pick_record_randomly(self,key_to_omit):
         keys_to_omit = [key_to_omit]
+        # TODO: create a dict for this once
         excempt_keys = IntentCategory.objects.get(intent_label=key_to_omit).intentccignore_set.all().values_list("ignore_intent",flat=True)
         excempt_keys = [x for x in excempt_keys]
         keys_to_omit.extend(excempt_keys)
-        print("excempt keys: ", excempt_keys)
         allowed_keys = list(self._counters_dict.keys())
         for key in keys_to_omit:
-            allowed_keys.remove(key)
+            if key in allowed_keys:
+                allowed_keys.remove(key)
         # pick a key
         choice = random.choice(allowed_keys)
         # pick a record from the list
