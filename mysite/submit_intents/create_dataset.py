@@ -1,7 +1,7 @@
 '''
     exports dataset from the DB into a folder containing label, seq.in, seq.out text files 
 '''
-from .models import IntentInstance
+from .models import IntentInstance, IntentCategory
 import os
 import math
 def get_dir(path,dir_name):
@@ -63,11 +63,16 @@ class CreateDataset:
             # in order to output one of each intent category alternatingly into the output files
             while not all(len(intents_dict[key])==0 for key in intents_dict):
                 for key in intents_dict:
+                    dont_export_list = IntentCategory.objects.get(intent_label=key).intentslot_set.filter(dont_export=True).values_list("slot_name",flat=True)
+                    dont_export_slot_names = []
+                    for x in dont_export_list:
+                        dont_export_slot_names.extend(["B-{}".format(x),"I-{}".format(x)])
+                    print("excempt slot names:",dont_export_slot_names)
                     if len(intents_dict[key]):
                         seq_in, seq_out = intents_dict[key].pop(0)
                         seq_out = seq_out.split()
                         for i in range(len(seq_out)):
-                            if seq_out[i] in ["B-text","I-text","B-message","B-subject"]:
+                            if seq_out[i] in dont_export_slot_names:
                                 seq_out[i] = "O"
                         seq_out = " ".join(seq_out)
                         label_file.write(key+'\n')
