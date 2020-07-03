@@ -36,6 +36,8 @@ def update_augmentation_settings(intent_name,excempt_stemmify,excempt_synonym,ex
     intent.intentslot_set.exclude(slot_name__in=dont_export).update(dont_export=False)
 
     IntentCCIgnore.objects.filter(intent=intent).delete()
+    if intents_CC_ignore == ["all"]:
+        intents_CC_ignore = [x for x in IntentCategory.objects.all().values_list("intent_label",flat=True)]
     for x in intents_CC_ignore:
         IntentCCIgnore(intent=intent,ignore_intent=x).save()
 

@@ -50,6 +50,8 @@ def goo_to_dataframe(seq_in,seq_out):
 def dataframe_to_goo(dataframe):
     seq_in = []
     seq_out = []
+    if dataframe is None:
+        return "",""
     for row in dataframe.itertuples():
         seq_in.append(row.TOKEN)
         if row.SLOT != "O":
@@ -157,6 +159,8 @@ class RandomRecordPicker:
             if key in allowed_keys:
                 allowed_keys.remove(key)
         # pick a key
+        if not allowed_keys:
+            return None
         choice = random.choice(allowed_keys)
         # pick a record from the list
         records_list = self._intents_dict[choice]

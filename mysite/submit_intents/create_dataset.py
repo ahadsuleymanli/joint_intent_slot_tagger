@@ -67,7 +67,6 @@ class CreateDataset:
                     dont_export_slot_names = []
                     for x in dont_export_list:
                         dont_export_slot_names.extend(["B-{}".format(x),"I-{}".format(x)])
-                    print("excempt slot names:",dont_export_slot_names)
                     if len(intents_dict[key]):
                         seq_in, seq_out = intents_dict[key].pop(0)
                         seq_out = seq_out.split()
