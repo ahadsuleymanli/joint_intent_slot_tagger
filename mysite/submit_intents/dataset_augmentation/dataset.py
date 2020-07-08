@@ -205,12 +205,12 @@ class AugmentableDataset:
                 if record1 is None or record2 is None:
                     continue
                 # create noise sequences to be added to head and tail of the original sequence
-                noise_head,_ = dataframe_to_goo(record1)
+                noise_head,noise_head_seqout = dataframe_to_goo(record1)
                 noise_head = " ".join(noise_head.split()[ceil(len(noise_head.split())/2):])
-                noise_head_seqout = " ".join(["O"]*len(noise_head.split()))
-                noise_tail,_ = dataframe_to_goo(record_picker.pick_record_randomly(key))
+                noise_head_seqout = " ".join(noise_head_seqout.split()[ceil(len(noise_head_seqout.split())/2):])
+                noise_tail,noise_tail_seqout = dataframe_to_goo(record2)
                 noise_tail = " ".join(noise_tail.split()[:floor(len(noise_tail.split())/2)])
-                noise_tail_seqout = " ".join(["O"]*len(noise_tail.split()))
+                noise_tail_seqout = " ".join(noise_tail_seqout.split()[:floor(len(noise_tail_seqout.split())/2)])
                     
                 rand = random.randint(0,10)/10
                 if rand<chance_to_omit:

@@ -41,8 +41,9 @@ def goo_to_dataframe(seq_in,seq_out):
             seq_in_list.append(word)
             seq_out_list.append(token)
     #collaplse seq_out_list tokens into single names:
-    seq_out_list = [x.split()[0].replace("B-","",1) for x in seq_out_list]
-        
+    seq_out_list = [x.split()[0].replace("B-","",1).replace("I-","",1) for x in seq_out_list]
+    # seq_out_list = [x.replace("I-","") for x in seq_out_list]
+    print(seq_out_list)   
     df = pd.DataFrame({"TOKEN":np.array(seq_in_list),"SLOT":np.array(seq_out_list)})
     return df
 
