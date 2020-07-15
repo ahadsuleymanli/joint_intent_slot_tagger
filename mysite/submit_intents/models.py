@@ -15,7 +15,7 @@ class IntentInstance(models.Model):
         slot_list = self.seq_out.replace('B-','').replace('I-','').split()
         obj, created = IntentCategory.objects.get_or_create(intent_label=self.label)
         for slot in slot_list:
-            if slot!="O":
+            if slot!="O" and not self.is_synthetic:
                 IntentSlot.objects.get_or_create(intent=obj, slot_name=slot)
         super().save(*args, **kwargs)
 

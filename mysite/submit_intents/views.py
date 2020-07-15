@@ -160,7 +160,9 @@ def export_dataset(request):
             IntentInstance.objects.all().delete()
         elif "clear_categories" in request.POST:
             IntentSlot.objects.all().delete()
-            IntentCategory.objects.all().delete()
+            # IntentCategory.objects.all().delete()
+        elif "clear_unused_slots" in request.POST:
+            pass
 
         return HttpResponseRedirect('/index/export_dataset')
 

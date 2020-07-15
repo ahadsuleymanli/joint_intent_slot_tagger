@@ -39,7 +39,7 @@ def do_augmentation():
     copy_of_shuffled = deepcopy(original_dataset)
 
     # 2. Add synonym replaced copies of the original and shuffled entries
-    original_dataset.do_synonym_replacement(target = augmented_dataset, p=1/5, n=1, similarity=0.65)
+    original_dataset.do_synonym_replacement(target = augmented_dataset, p=1/5, n=1, similarity=0.80)
     copy_of_shuffled.do_synonym_replacement(target = augmented_dataset, p=1/5, n=1, similarity=0.90)
 
     # 3. Add stemmified copies
@@ -48,18 +48,18 @@ def do_augmentation():
     # 4. Remove duplicates from the augmented list so far
     augmented_dataset.remove_duplicates()
 
-    # 5. Add noise that are partial intents
-    # augmented_dict_1 = deepcopy(augmented_dict)
-    deepcopy(augmented_dataset).add_cross_category_noise(target=augmented_dataset, n=1, fraction=1/2)
+    # # 5. Add noise that are partial intents
+    # # augmented_dict_1 = deepcopy(augmented_dict)
+    # deepcopy(augmented_dataset).add_cross_category_noise(target=augmented_dataset, n=1, fraction=1/2)
 
-    # 6. Add noise that are partial intents
-    original_dataset.add_cross_category_noise(target=augmented_dataset, n=2, fraction=1/2)
+    # # 6. Add noise that are partial intents
+    # original_dataset.add_cross_category_noise(target=augmented_dataset, n=2, fraction=1/2)
 
     # 7. Add noise that is complete random texts from some book
     deepcopy(augmented_dataset).add_random_noise(target=augmented_dataset, n=2)
 
-    # 8. Add one more copy of the original dataset
-    original_dataset.do_shuffle(target = augmented_dataset, n=1)
+    # # 8. Add one more copy of the original dataset
+    # original_dataset.do_shuffle(target = augmented_dataset, n=1)
 
     for key, intents_list in augmented_dataset.intents_dict.items():
         '''

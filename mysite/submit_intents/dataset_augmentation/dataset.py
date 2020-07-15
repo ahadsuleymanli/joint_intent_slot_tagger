@@ -107,7 +107,7 @@ class AugmentableDataset:
             intent_df.at[i,"TOKEN"] = line
 
     @prevent_augmenting_self
-    def do_synonym_replacement(self, target, p=1/5, n=1, similarity=0.7):
+    def do_synonym_replacement(self, target, p=1/5, n=1, similarity=0.75):
         '''
             target: target AugmentableDataset object
             p: chance to replace each word
@@ -137,8 +137,9 @@ class AugmentableDataset:
                                 with p chance replace the word with its synonym or root's synonym
                                 if the word is in any ignorelist, act accordingly
                             '''
-                            dont_stemmify_ = True if any([x is True for x in [intent_df.at[i,"EXCEMPT_STEMM"], intent_df.at[i,"EXCEMPT_SYNON"]]]) else False
-                            similarity_ = 0.95 if intent_df.at[i,"EXCEMPT_SYNON"] is True else similarity
+                            dont_stemmify_ = True if any([x == True for x in [intent_df.at[i,"EXCEMPT_STEMM"], intent_df.at[i,"EXCEMPT_SYNON"]]]) else False
+                            similarity_ = 0.95 if intent_df.at[i,"EXCEMPT_SYNON"] == True else similarity
+                            # similarity_ = similarity
                             intent_df.at[i,"TOKEN"] = get_phrase_synonym(row.TOKEN,words_already_used,word_vectors,similarity=similarity_,dont_stemmify = dont_stemmify_)
                         self.add_to_dict(key,intent_df, target)
     @prevent_augmenting_self
@@ -174,7 +175,8 @@ class AugmentableDataset:
             for intent_df in intents_list:
                 intent_df = intent_df.copy(deep=True) #creating a deep copy that will be modified
                 for i, row in intent_df.iterrows():
-                    intent_df.at[i,"TOKEN"] = get_phrase_root(intent_df.at[i,"TOKEN"])
+                    if intent_df.at[i,"EXCEMPT_STEMM"] != True:
+                        intent_df.at[i,"TOKEN"] = get_phrase_root(intent_df.at[i,"TOKEN"])
                 self.add_to_dict(key,intent_df,target)
 
     def remove_duplicates(self):
