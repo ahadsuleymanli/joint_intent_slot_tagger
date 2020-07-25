@@ -1,6 +1,9 @@
 # A self contained web service for Goo format data labelling.<br/>
 The format is specified in the paper `Slot-Gated Modeling for Joint Slot Filling and Intent Prediction (Goo et al)`.<br/>
 Format uses tags in the form of `B-[slot] I-[slot] O`. Dataset is saved into `label`, `seq.in` and `seq.out` files.<br/>
+
+```Edit: Apparently this format is now called the IOB format.```
+
 #### Features:
 - Add new intent labels and slots on the fly!
 - Add, delete, edit intents.
